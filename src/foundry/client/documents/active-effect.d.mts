@@ -1625,6 +1625,14 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
   get modifiesActor(): boolean;
 
   /**
+   * Read-only alias for `system.changes`, installed as a non-enumerable getter by
+   * {@linkcode ActiveEffect._initialize | ActiveEffect#_initialize}.
+   * @deprecated since v14, will be removed in v16
+   * @remarks Replaced by `system.changes`.
+   */
+  get changes(): ActiveEffect.ChangeData[];
+
+  /**
    * A thumbnail image path used to represent this document. Returns {@linkcode ActiveEffect.img | img}.
    */
   get thumbnail(): string;

@@ -5,15 +5,7 @@ import Document = foundry.abstract.Document;
 import fields = foundry.data.fields;
 import ActiveEffectTypeDataModel = foundry.data.ActiveEffectTypeDataModel;
 
-class TestActiveEffect<
-  out SubType extends BaseActiveEffect.SubType = BaseActiveEffect.SubType,
-> extends BaseActiveEffect<SubType> {
-  get compendium() {
-    return this.inCompendium
-      ? (game.packs!.get(this.pack!) as foundry.documents.collections.CompendiumCollection.ForDocument<"ActiveEffect">)
-      : null;
-  }
-}
+class TestActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffect.SubType> extends ActiveEffect<SubType> {}
 
 // @ts-expect-error Active effects require a `name` in construction data.
 new TestActiveEffect();
