@@ -1368,11 +1368,10 @@ declare namespace ActiveEffect {
     type: string;
 
     /**
-     * The value of the change. This is modeled as an `AnyField`, so values may be any serializable
-     * structure.
+     * The value of the change effect
      * @defaultValue `""`
      */
-    value: unknown;
+    value: string;
 
     /**
      * The priority level with which this change is applied within its `phase`. A `null` value is
