@@ -2,6 +2,7 @@ import { expectTypeOf } from "vitest";
 import type { EmptyObject, InterfaceToObject } from "fvtt-types/utils";
 import BaseActiveEffect = foundry.documents.BaseActiveEffect;
 import Document = foundry.abstract.Document;
+import CompendiumCollection = foundry.documents.collections.CompendiumCollection;
 import fields = foundry.data.fields;
 import ActiveEffectTypeDataModel = foundry.data.ActiveEffectTypeDataModel;
 
@@ -409,6 +410,12 @@ expectTypeOf(TestActiveEffect.fromJSON("some JSON")).toEqualTypeOf<ActiveEffect.
 // Document template instance overrides
 expectTypeOf(fullTestAE.parentCollection).toEqualTypeOf<"effects" | null>();
 expectTypeOf(fullTestAE.pack).toEqualTypeOf<string | null>();
+expectTypeOf(fullTestAE.compendium).toEqualTypeOf<CompendiumCollection<"ActiveEffect"> | null>();
+
+declare const aeCompendium: ActiveEffect.Implementation["compendium"];
+const _activeEffectCompendium: CompendiumCollection<"ActiveEffect"> | null = aeCompendium;
+// @ts-expect-error ActiveEffect compendium is not Actor/Item compendium.
+const _actorOrItemCompendium: CompendiumCollection<"Actor"> | CompendiumCollection<"Item"> | null = aeCompendium;
 // TODO: create fake subtype, test its `system`
 // @ts-expect-error "base" system should be an ActiveEffectTypeDataModel instance, not `never`
 expectTypeOf(fullTestAE.system).toBeNever();

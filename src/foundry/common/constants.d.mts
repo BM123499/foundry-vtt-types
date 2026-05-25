@@ -428,6 +428,7 @@ export type WORLD_DOCUMENT_TYPES = ValueOf<typeof WORLD_DOCUMENT_TYPES>;
  * The allowed primary Document types which may exist within a Compendium pack.
  */
 export declare const COMPENDIUM_DOCUMENT_TYPES: readonly [
+  "ActiveEffect",
   "Actor",
   "Adventure",
   "Cards",
@@ -552,6 +553,7 @@ export type DRAWING_FILL_TYPES = Brand<number, "constants.DRAWING_FILL_TYPES">;
  * Define the allowed Document types which Folders may contain
  */
 export declare const FOLDER_DOCUMENT_TYPES: readonly [
+  "ActiveEffect",
   "Actor",
   "Adventure",
   "Item",
