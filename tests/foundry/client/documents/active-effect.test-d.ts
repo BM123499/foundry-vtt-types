@@ -610,6 +610,13 @@ expectTypeOf(
     replacementData: {},
   }),
 ).toEqualTypeOf<unknown>();
+expectTypeOf(ActiveEffect.applyChangeField(someTargetDoc, change)).toEqualTypeOf<unknown>();
+expectTypeOf(
+  ActiveEffect.applyChangeField(someTargetDoc, change, {
+    field: nf,
+    modifyTarget: true,
+  }),
+).toEqualTypeOf<unknown>();
 
 expectTypeOf(ActiveEffect.fromStatusEffect("flying")).toEqualTypeOf<Promise<ActiveEffect.Implementation>>();
 expectTypeOf(ActiveEffect.fromStatusEffect("flying", {})).toEqualTypeOf<Promise<ActiveEffect.Implementation>>();
@@ -783,6 +790,13 @@ expectTypeOf(effect.prepareDerivedData()).toEqualTypeOf<void>();
 expectTypeOf(effect.updateDuration()).toEqualTypeOf<ActiveEffect.Duration>();
 expectTypeOf(effect.updateDuration({})).toEqualTypeOf<ActiveEffect.Duration>();
 expectTypeOf(effect.updateDuration({ round: 2, turn: 1 })).toEqualTypeOf<ActiveEffect.Duration>();
+
+const preparedDuration = effect.updateDuration();
+/* eslint-disable @typescript-eslint/no-deprecated -- Compatibility aliases are intentionally asserted. */
+expectTypeOf(preparedDuration.type).toEqualTypeOf<ActiveEffect.DurationType | undefined>();
+expectTypeOf(preparedDuration.duration).toEqualTypeOf<number | null | undefined>();
+/* eslint-enable @typescript-eslint/no-deprecated */
+
 expectTypeOf(effect.isExpiryEvent("turnEnd")).toBeBoolean();
 expectTypeOf(effect.isExpiryEvent("turnEnd", {})).toBeBoolean();
 if (game.combat) {

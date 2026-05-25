@@ -12,9 +12,9 @@ expectTypeOf(schema.effects).toEqualTypeOf<
   fields.SetField<fields.DocumentUUIDField<{ type: "ActiveEffect"; nullable: false }>>
 >();
 
-expectTypeOf(foundry.data.regionBehaviors.ApplyActiveEffectRegionBehaviorType.events["tokenEnter"]).toEqualTypeOf<
-  RegionBehaviorType.EventBehaviorStaticHandler | undefined
->();
-expectTypeOf(foundry.data.regionBehaviors.ApplyActiveEffectRegionBehaviorType.events["tokenExit"]).toEqualTypeOf<
-  RegionBehaviorType.EventBehaviorStaticHandler | undefined
->();
+const events = foundry.data.regionBehaviors.ApplyActiveEffectRegionBehaviorType.events;
+expectTypeOf(events).toEqualTypeOf<Record<string, RegionBehaviorType.EventBehaviorStaticHandler>>();
+expectTypeOf(events["tokenEnter"]).toEqualTypeOf<RegionBehaviorType.EventBehaviorStaticHandler | undefined>();
+expectTypeOf(events["tokenExit"]).toEqualTypeOf<RegionBehaviorType.EventBehaviorStaticHandler | undefined>();
+expectTypeOf<"tokenEnter">().toExtend<keyof typeof events>();
+expectTypeOf<"tokenExit">().toExtend<keyof typeof events>();
