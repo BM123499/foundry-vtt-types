@@ -1419,10 +1419,9 @@ declare class Actor<out SubType extends Actor.SubType = Actor.SubType> extends f
   ): Actor.GetActiveTokensReturn<ReturnDocument>;
 
   /**
-   * Get all ActiveEffects that may apply to this Actor.
-   * If CONFIG.ActiveEffect.legacyTransferral is true, this is equivalent to actor.effects.contents.
-   * If CONFIG.ActiveEffect.legacyTransferral is false, this will also return all the transferred ActiveEffects on any
-   * of the Actor's owned Items.
+   * Get all ActiveEffects that may apply to this Actor. This also yields all transferred
+   * ActiveEffects on any of the Actor's owned Items.
+   * @yields The applicable ActiveEffects.
    */
   allApplicableEffects(): Generator<ActiveEffect.Implementation, void, undefined>;
 

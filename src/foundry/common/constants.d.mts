@@ -85,6 +85,100 @@ export declare const ACTIVE_EFFECT_MODES: Readonly<{
 export type ACTIVE_EFFECT_MODES = Brand<number, "constants.ACTIVE_EFFECT_MODES">;
 
 /**
+ * Time-based units in which an ActiveEffect's duration can be expressed.
+ */
+export declare const ACTIVE_EFFECT_TIME_DURATION_UNITS: readonly [
+  "years",
+  "months",
+  "days",
+  "hours",
+  "minutes",
+  "seconds",
+];
+export type ACTIVE_EFFECT_TIME_DURATION_UNITS = ValueOf<typeof ACTIVE_EFFECT_TIME_DURATION_UNITS>;
+
+/**
+ * All units in which an ActiveEffect's duration can be expressed.
+ */
+export declare const ACTIVE_EFFECT_DURATION_UNITS: readonly [
+  "years",
+  "months",
+  "days",
+  "hours",
+  "minutes",
+  "seconds",
+  "rounds",
+  "turns",
+];
+export type ACTIVE_EFFECT_DURATION_UNITS = ValueOf<typeof ACTIVE_EFFECT_DURATION_UNITS>;
+
+/**
+ * Define the core ActiveEffect expiry events.
+ * Other events can be defined by systems and modules, with their handling also left to them.
+ */
+export declare const ACTIVE_EFFECT_EXPIRY_EVENTS: readonly [
+  "combatStart",
+  "roundStart",
+  "turnStart",
+  "combatEnd",
+  "roundEnd",
+  "turnEnd",
+];
+export type ACTIVE_EFFECT_EXPIRY_EVENTS = ValueOf<typeof ACTIVE_EFFECT_EXPIRY_EVENTS>;
+
+/**
+ * Define the core ActiveEffect change-application phases.
+ * Additional phases can be registered by systems and modules, with the registering package also responsible for
+ * calling `Actor#applyActiveEffects("myNewPhase")` at the desired time.
+ */
+export declare const ACTIVE_EFFECT_CHANGE_PHASES: readonly ["initial", "final"];
+export type ACTIVE_EFFECT_CHANGE_PHASES = ValueOf<typeof ACTIVE_EFFECT_CHANGE_PHASES>;
+
+/**
+ * Define the core ActiveEffect change types and their default priorities. Other arbitrary string types can be used by
+ * systems and modules to identify special behaviors and are ignored.
+ */
+export declare const ACTIVE_EFFECT_CHANGE_TYPES: Readonly<{
+  /** Used to denote that the handling of the effect is programmatically provided by a system or module. */
+  custom: 0;
+
+  /** Multiplies a numeric base value by the numeric effect value. */
+  multiply: 10;
+
+  /** Sums two values, concatenates strings, pushes onto Arrays, or adds to Sets. */
+  add: 20;
+
+  /** Subtracts a numeric change value from target values, splices values from Arrays, or deletes an element from Sets. */
+  subtract: 20;
+
+  /** Keeps the lower value of the base value and the effect value. The lower value of a Set is a subset. */
+  downgrade: 30;
+
+  /** Keeps the higher value of the base value and the effect value. The higher value of a Set is a superset. */
+  upgrade: 40;
+
+  /** Replaces the base value with the effect value. */
+  override: 50;
+}>;
+export type ACTIVE_EFFECT_CHANGE_TYPES = keyof typeof ACTIVE_EFFECT_CHANGE_TYPES;
+
+/**
+ * Possible values for `ActiveEffectData#showIcon`: the default is `CONDITIONAL`, dependent on whether the
+ * ActiveEffect has a temporary duration.
+ */
+export declare const ACTIVE_EFFECT_SHOW_ICON: Readonly<{
+  /** The icon is never shown. */
+  NEVER: 0 & ACTIVE_EFFECT_SHOW_ICON;
+
+  /** The icon is shown if the ActiveEffect has a temporary duration. */
+  CONDITIONAL: 1 & ACTIVE_EFFECT_SHOW_ICON;
+
+  /** The icon is always shown. */
+  ALWAYS: 2 & ACTIVE_EFFECT_SHOW_ICON;
+}>;
+export type ACTIVE_EFFECT_SHOW_ICON = Brand<number, "constants.ACTIVE_EFFECT_SHOW_ICON">;
+
+/**
  * Define the string name used for the base document type when specific sub-types are not defined by the system
  */
 export declare const BASE_DOCUMENT_TYPE: "base";

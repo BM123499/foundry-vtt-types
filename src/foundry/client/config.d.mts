@@ -199,6 +199,23 @@ declare global {
       bar: string[];
       value: string[];
     }
+
+    /**
+     * Handler signature for registering custom Document embed renderers via the various
+     * `CONFIG.<DocumentName>.embedHandlers` arrays.
+     * @param doc     - The Document being embedded.
+     * @param content - The candidate element for embedding.
+     * @param config  - Configuration for embedding behavior.
+     * @param options - The original enrichment options for cases where the Document embed content
+     *                  also contains text that must be enriched.
+     * @returns The desired embed result, or `null` to prevent embedding.
+     */
+    type DocumentEmbedHandler = (
+      doc: Document.Any,
+      content: HTMLElement | null,
+      config: foundry.applications.ux.TextEditor.DocumentHTMLEmbedConfig,
+      options?: foundry.applications.ux.TextEditor.EnrichmentOptions,
+    ) => Promise<HTMLElement | HTMLCollection | null>;
   }
 
   /**
@@ -1545,17 +1562,41 @@ declare global {
     time: CONFIG.Time;
 
     /**
-     * Configuration for the ActiveEffect embedded document type
+     * Configuration for the ActiveEffect document type. Promoted to a primary document type in v14
+     * (compendium-indexable, though no dedicated world collection).
      */
     ActiveEffect: {
+      /** @defaultValue `"ui/banners/active-effect-banner.webp"` */
+      compendiumBanner: string;
+
       /** @defaultValue `ActiveEffect` */
       documentClass: Document.ImplementationClassFor<"ActiveEffect">;
 
       /**
-       * @defaultValue `{}`
-       * @remarks `TypeDataModel` is preferred to `DataModel` per core Foundry team
+       * @defaultValue `{ base: ActiveEffectTypeDataModel }`
+       * @remarks `TypeDataModel` is preferred to `DataModel` per core Foundry team. The `base`
+       * subtype defaults to {@linkcode foundry.data.ActiveEffectTypeDataModel}, which provides
+       * the `system.changes` ArrayField.
        */
       dataModels: Record<string, typeof DataModel<any, ActiveEffect.Implementation>>;
+
+      /** @defaultValue `"base"` */
+      defaultType: string;
+
+      /** @defaultValue `[]` */
+      embedHandlers: CONFIG.DocumentEmbedHandler[];
+
+      /**
+       * @defaultValue `{ base: "TYPES.Base" }`
+       * @remarks Initialized by `Localization#initialize`, is an empty object until `i18nInit`.
+       */
+      typeLabels: Record<foundry.documents.BaseActiveEffect.SubType, string>;
+
+      /** @defaultValue `{}` */
+      typeHints: Record<string, string>;
+
+      /** @defaultValue `{}` */
+      typeIcons: Record<string, string>;
 
       /**
        * @remarks Added by {@linkcode foundry.applications.sheets._registerDefaultSheets} in {@linkcode Game | Game#constructor} as an
@@ -1563,23 +1604,42 @@ declare global {
        */
       sheetClasses: CONFIG.SheetClasses<"ActiveEffect">;
 
+      /** @defaultValue `"fa-solid fa-person-rays"` */
+      sidebarIcon: string;
+
       /**
+       * Additional change types registered by packages. Combined with
+       * {@linkcode CONST.ACTIVE_EFFECT_CHANGE_TYPES} when {@linkcode ActiveEffect.CHANGE_TYPES} is
+       * lazily compiled on first access.
        * @defaultValue `{}`
-       * @remarks Initialized by `Localization#initialize`, is an empty object until `i18nInit`
        */
-      typeLabels: Record<foundry.documents.BaseActiveEffect.SubType, string>;
-
-      /** @defaultValue `{}` */
-      typeIcons: Record<string, string>;
+      changeTypes: Record<string, ActiveEffect.ChangeTypeConfig>;
 
       /**
-       * If true, Active Effects on Items will be copied to the Actor when the Item is created on the Actor if the
-       * Active Effect's transfer property is true, and will be deleted when that Item is deleted from the Actor.
-       * If false, Active Effects are never copied to the Actor, but will still apply to the Actor from within the Item
-       * if the transfer property on the Active Effect is true.
-       * @remarks Foundry states "\@deprecated since v11" but this is misleading for actual use
+       * Additional expiry events registered by packages, keyed by event identifier with the value
+       * a localization label. Such events must be triggered by calling
+       * {@linkcode foundry.documents.ActiveEffect.registry | ActiveEffect.registry.refresh}; if an
+       * expiry event happens in tandem with advancing world time, the advancement must be done
+       * before notifying the registry of the custom event.
+       * @defaultValue `{}`
        */
-      legacyTransferral: boolean;
+      expiryEvents: Record<string, string>;
+
+      /**
+       * The action taken by the {@linkcode foundry.helpers.ActiveEffectRegistry | ActiveEffectRegistry}
+       * upon an ActiveEffect's expiration. An `"update"` action sets the value of
+       * {@linkcode ActiveEffect.DurationData.expired | ActiveEffectDuration#expired}; `"delete"`
+       * removes the effect; `null` disables registry-driven expiry handling.
+       * @defaultValue `"update"`
+       */
+      expiryAction: "update" | "delete" | null;
+
+      /**
+       * Additional change phases registered by packages. `Actor#applyActiveEffects` must be called
+       * by introducing packages at the desired points in data preparation or on certain events.
+       * @defaultValue `{}`
+       */
+      phases: Record<string, ActiveEffect.ChangePhaseConfig>;
     };
 
     /**

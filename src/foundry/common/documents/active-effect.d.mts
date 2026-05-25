@@ -31,11 +31,14 @@ declare abstract class BaseActiveEffect<
    *   name: "ActiveEffect",
    *   collection: "effects",
    *   hasTypeData: true,
+   *   baseTypeAllowed: true,
+   *   indexed: true,
+   *   compendiumIndexFields: ["_id", "name", "img", "type", "sort", "folder"],
    *   label: "DOCUMENT.ActiveEffect",
    *   labelPlural: "DOCUMENT.ActiveEffects",
-   *   schemaVersion: "13.341",
+   *   schemaVersion: "14.353",
    *   permissions: {
-   *     create: "OWNER",
+   *     create: BaseActiveEffect.#canCreate, // embedded => parent OWNER; otherwise GM
    *     delete: "OWNER"
    *   }
    * });
@@ -48,6 +51,13 @@ declare abstract class BaseActiveEffect<
   /** @defaultValue `["DOCUMENT", "EFFECT"]` */
   static override LOCALIZATION_PREFIXES: string[];
 
+  /**
+   * The default icon used for newly created ActiveEffect documents.
+   * @defaultValue `"icons/svg/aura.svg"`
+   * @remarks Referenced as `this.implementation.DEFAULT_ICON` in the schema's `img` initial.
+   */
+  static DEFAULT_ICON: string;
+
   protected override _preCreate(
     data: BaseActiveEffect.CreateData,
     options: BaseActiveEffect.Database.PreCreateOptions,
@@ -58,6 +68,12 @@ declare abstract class BaseActiveEffect<
    * @remarks
    * Migrations:
    * - `icon` to `img` (since v12, no specified end)
+   * - non-UUID-style `origin` strings to `null` with the original copied to `flags.core.originText` (since v14)
+   * - root-level `changes` array to `system.changes` (since v14)
+   * - numeric `change.mode` to string `change.type` per `BaseActiveEffect.#MODES_TO_TYPES` (since v14)
+   * - string `change.value` JSON-decoded via `BaseActiveEffect.#migrateChangeValue` (since v14)
+   * - legacy `duration.{startTime, startRound, startTurn, combat}` to top-level `start.*` (since v14)
+   * - legacy `duration.{seconds, turns, rounds}` to `duration.{value, units}` (since v14)
    */
   static override migrateData(source: AnyMutableObject): AnyMutableObject;
 
@@ -65,8 +81,21 @@ declare abstract class BaseActiveEffect<
    * @remarks
    * Shims:
    * - `icon` to `img` (since v12, until v14)
+   * - root-level `changes` getter aliasing `system.changes` (since v14, until v16)
+   * - numeric `change.mode` shim — getter/setter on each change object that warns and maps to v14's
+   *   string `change.type` (since v14, until v16)
+   * - `duration.{startTime, startRound, startTurn, combat}` getters delegating to `start.*` (since v14, until v16)
+   * - `duration.{seconds, rounds, turns}` getters delegating to `duration.value` when `duration.units`
+   *   matches (since v14, until v16)
    */
   static override shimData(data: AnyMutableObject, options?: DataModel.ShimDataOptions): AnyMutableObject;
+
+  /**
+   * Add shims to the changes array. Installs a numeric `mode` getter/setter on each change object
+   * that delegates to the string `type` and emits a compatibility warning.
+   * @internal
+   */
+  static _shimChanges(changes: ActiveEffect.ChangeData[]): void;
 
   /**
    * @deprecated since v12, will be removed in v14
@@ -325,6 +354,17 @@ declare namespace BaseActiveEffect {
   export import DurationData = ActiveEffect.DurationData;
   export import Duration = ActiveEffect.Duration;
   export import ChangeData = ActiveEffect.ChangeData;
+  export import StartSchema = ActiveEffect.StartSchema;
+  export import StartData = ActiveEffect.StartData;
+  export import EffectStartData = ActiveEffect.EffectStartData;
+  export import ChangePhaseConfig = ActiveEffect.ChangePhaseConfig;
+  export import ChangeTypeConfig = ActiveEffect.ChangeTypeConfig;
+  export import ChangeTypeHandler = ActiveEffect.ChangeTypeHandler;
+  export import ChangeTypeRenderer = ActiveEffect.ChangeTypeRenderer;
+  export import ApplyChangeOptions = ActiveEffect.ApplyChangeOptions;
+  export import ApplyChangeFieldOptions = ActiveEffect.ApplyChangeFieldOptions;
+  export import UpdateDurationContext = ActiveEffect.UpdateDurationContext;
+  export import IsExpiryEventContext = ActiveEffect.IsExpiryEventContext;
 
   namespace Internal {
     // Note(LukeAbby): The point of this is to give the base class of `ActiveEffect` a name.
