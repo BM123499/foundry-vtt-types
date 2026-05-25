@@ -9,9 +9,12 @@ import type {
   RequiredProps,
 } from "#utils";
 import type { fields } from "#common/data/_module.d.mts";
+import type ActiveEffectTypeDataModel from "#common/data/active-effect.d.mts";
 import type { DataModel, DatabaseBackend, Document } from "#common/abstract/_module.d.mts";
-import type { BaseActiveEffect, BaseCombat } from "#common/documents/_module.d.mts";
+import type { BaseActiveEffect, BaseCombat, BaseCombatant, BaseFolder } from "#common/documents/_module.d.mts";
 import type { DialogV2 } from "#client/applications/api/_module.d.mts";
+
+import type ActiveEffectRegistry from "#client/helpers/active-effect-registry.d.mts";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Only used for links.
 import type ClientDatabaseBackend from "#client/data/client-backend.d.mts";
@@ -58,16 +61,23 @@ declare namespace ActiveEffect {
       name: "ActiveEffect";
       collection: "effects";
       hasTypeData: true;
+      baseTypeAllowed: true;
+      indexed: true;
+      compendiumIndexFields: ["_id", "name", "img", "type", "sort", "folder"];
       label: "DOCUMENT.ActiveEffect";
       labelPlural: "DOCUMENT.ActiveEffects";
-      schemaVersion: "13.341";
+      schemaVersion: "14.353";
       permissions: Metadata.Permissions;
     }>
   > {}
 
   namespace Metadata {
     interface Permissions {
-      create: "OWNER";
+      /**
+       * Embedded `ActiveEffect`s depend on parent (viz. `Actor` or `Item`) ownership; otherwise
+       * the user must be at least an Assistant Gamemaster.
+       */
+      create(user: User.Internal.Implementation, doc: Implementation): boolean;
       delete: "OWNER";
     }
   }
@@ -275,20 +285,18 @@ declare namespace ActiveEffect {
     name: fields.StringField<{ required: true; blank: false; textSearch: true }>;
 
     /**
-     * An image path used to depict the ActiveEffect as an icon
-     * @defaultValue `null`
+     * An image path used to depict the ActiveEffect as an icon.
+     * @defaultValue `ActiveEffect.implementation.DEFAULT_ICON` (`"icons/svg/aura.svg"` for core)
      */
     img: fields.FilePathField<{ categories: ["IMAGE"] }>;
 
     type: fields.DocumentTypeField<typeof BaseActiveEffect, { initial: typeof CONST.BASE_DOCUMENT_TYPE }>;
 
-    system: fields.TypeDataField<typeof BaseActiveEffect>;
-
     /**
-     * The array of EffectChangeData objects which the ActiveEffect applies
-     * @defaultValue `[]`
+     * The system-data sub-schema. Defaults to {@linkcode ActiveEffectTypeDataModel} for the base
+     * subtype, which provides the `changes` ArrayField.
      */
-    changes: fields.ArrayField<fields.SchemaField<ChangeSchema>>;
+    system: fields.TypeDataField<typeof BaseActiveEffect>;
 
     /**
      * Is this ActiveEffect currently disabled?
@@ -297,7 +305,16 @@ declare namespace ActiveEffect {
     disabled: fields.BooleanField;
 
     /**
-     * An ActiveEffect.DurationData object which describes the duration of the ActiveEffect
+     * Data pertaining to when the ActiveEffect was created. `null` for ActiveEffects that were
+     * not created on an embedded Actor.
+     */
+    start: fields.SchemaField<StartSchema, { nullable: true }>;
+
+    /**
+     * An EffectDurationData object which describes the duration of the ActiveEffect.
+     * @remarks Compatibility aliases (`seconds`, `rounds`, `turns`, `startTime`, `startRound`,
+     * `startTurn`, `combat`) remain readable on the initialized object via shim getters that emit
+     * a compatibility warning when accessed. See {@linkcode Duration}.
      */
     duration: fields.SchemaField<DurationSchema>;
 
@@ -308,10 +325,15 @@ declare namespace ActiveEffect {
     description: fields.HTMLField<{ textSearch: true }>;
 
     /**
-     * A UUID reference to the document from which this ActiveEffect originated
+     * A UUID reference to the document from which this ActiveEffect originated.
      * @defaultValue `null`
+     * @remarks Non-UUID strings are migrated to `null` and copied to `flags.core.originText` by
+     * {@linkcode BaseActiveEffect.migrateData}. Runtime construction uses this field with
+     * `{ relative: true }` at runtime so `.parent.id`-style relative UUIDs may be resolved.
+     * `nullable: true; initial: null` are re-passed here to preserve the {@linkcode fields.DocumentUUIDField}
+     * defaults — see the remark on {@linkcode fields.DocumentUUIDField.Options.relative | Options.relative}.
      */
-    origin: fields.StringField<{ nullable: true; blank: false; initial: null }>;
+    origin: fields.DocumentUUIDField<{ relative: true; nullable: true; initial: null }>;
 
     /**
      * A color string which applies a tint to the ActiveEffect icon
@@ -321,7 +343,7 @@ declare namespace ActiveEffect {
 
     /**
      * Does this ActiveEffect automatically transfer from an Item to an Actor?
-     * @defaultValue `false`
+     * @defaultValue `true`
      */
     transfer: fields.BooleanField<{ initial: true }>;
 
@@ -330,6 +352,24 @@ declare namespace ActiveEffect {
      * @defaultValue `[]`
      */
     statuses: fields.SetField<fields.StringField<{ required: true; blank: false }>>;
+
+    /**
+     * Should this ActiveEffect's image be prominently displayed as an icon alongside Tokens,
+     * Combatants, etc.?
+     * @defaultValue `CONST.ACTIVE_EFFECT_SHOW_ICON.CONDITIONAL` (`1`)
+     */
+    showIcon: fields.NumberField<
+      { required: true; nullable: false; initial: typeof CONST.ACTIVE_EFFECT_SHOW_ICON.CONDITIONAL },
+      CONST.ACTIVE_EFFECT_SHOW_ICON | null | undefined,
+      CONST.ACTIVE_EFFECT_SHOW_ICON,
+      CONST.ACTIVE_EFFECT_SHOW_ICON
+    >;
+
+    /**
+     * The containing Folder, if any.
+     * @defaultValue `null`
+     */
+    folder: fields.ForeignDocumentField<typeof BaseFolder>;
 
     /**
      * The sort value
@@ -346,88 +386,151 @@ declare namespace ActiveEffect {
     _stats: fields.DocumentStatsField;
   }
 
-  interface ChangeSchema extends fields.DataSchema {
-    /**
-     * The attribute path in the Actor or Item data which the change modifies
-     * @defaultValue `""`
-     */
-    key: fields.StringField<{ required: true }>;
+  /**
+   * The schema of a single EffectChangeData.
+   * @remarks The canonical definition lives on {@linkcode ActiveEffectTypeDataModel.ChangeSchema}
+   * as part of the `system.changes` ArrayField; this alias keeps `ActiveEffect.ChangeSchema`
+   * available for callers that referenced the prior root-level schema.
+   */
+  interface ChangeSchema extends ActiveEffectTypeDataModel.ChangeSchema {}
 
+  /**
+   * The schema for the `start` SchemaField. Captures the combat/turn/round/time information at
+   * which the effect was first applied. The wrapping field is `nullable: true`.
+   */
+  interface StartSchema extends fields.DataSchema {
     /**
-     * The value of the change effect
-     * @defaultValue `""`
-     */
-    value: fields.StringField<{ required: true }>;
-
-    /**
-     * The modification mode with which the change is applied
-     * @defaultValue `CONST.ACTIVE_EFFECT_MODES.ADD`
-     */
-    mode: fields.NumberField<
-      {
-        required: true;
-        nullable: false;
-        integer: true;
-        initial: typeof CONST.ACTIVE_EFFECT_MODES.ADD;
-      },
-      // Note(LukeAbby): This will always need an override since there's no validation.
-      CONST.ACTIVE_EFFECT_MODES | null | undefined,
-      CONST.ACTIVE_EFFECT_MODES,
-      CONST.ACTIVE_EFFECT_MODES
-    >;
-
-    /**
-     * The priority level with which this change is applied
-     * @defaultValue `undefined`
-     */
-    priority: fields.NumberField;
-  }
-
-  interface DurationSchema extends fields.DataSchema {
-    /**
-     * The world time when the active effect first started
-     * @defaultValue `null`
-     */
-    startTime: fields.NumberField<{ initial: null }>;
-
-    /**
-     * The maximum duration of the effect, in seconds
-     * @defaultValue `undefined`
-     */
-    seconds: fields.NumberField<{ integer: true; min: 0 }>;
-
-    /**
-     * The `_id` of the {@linkcode Combat} in which the effect first started
+     * The `_id` of the {@linkcode Combat} that was active when this Effect first started.
      * @defaultValue `null`
      */
     combat: fields.ForeignDocumentField<typeof BaseCombat>;
 
     /**
-     * The maximum duration of the effect, in combat rounds
-     * @defaultValue `undefined`
+     * The `_id` of the Combatant whose turn was active when the Effect first started.
+     * @defaultValue `null`
      */
-    rounds: fields.NumberField<{ integer: true; min: 0 }>;
+    combatant: fields.ForeignDocumentField<typeof BaseCombatant, { idOnly: true }>;
 
     /**
-     * The maximum duration of the effect, in combat turns
-     * @defaultValue `undefined`
+     * The Combatant's initiative roll at the time the Effect first started.
+     * @defaultValue `null`
      */
-    turns: fields.NumberField<{ integer: true; min: 0 }>;
+    initiative: fields.NumberField<{ required: true }>;
 
     /**
-     * The round of the CombatEncounter in which the effect first started
-     * @defaultValue `undefined`
+     * The round of the Combat when the Effect first started.
+     * @defaultValue `null`
      */
-    startRound: fields.NumberField<{ integer: true; min: 0 }>;
+    round: fields.NumberField<{ required: true; integer: true; min: 0 }>;
 
     /**
-     * The turn of the CombatEncounter in which the effect first started
-     * @defaultValue `undefined`
+     * The turn of the Combat when the Effect first started.
+     * @defaultValue `null`
      */
-    startTurn: fields.NumberField<{ integer: true; min: 0 }>;
+    turn: fields.NumberField<{ required: true; integer: true; min: 0 }>;
+
+    /**
+     * The world time at which the Effect first started.
+     * @defaultValue `0`
+     */
+    time: fields.NumberField<{ required: true; nullable: false; integer: true }>;
   }
 
-  interface DurationData extends fields.SchemaField.InitializedData<DurationSchema> {}
+  /**
+   * Initialized form of the `start` data. May be `null` for effects not created on an embedded Actor.
+   */
+  interface StartData extends fields.SchemaField.InitializedData<StartSchema> {}
+
+  /**
+   * Schema for the `duration` SchemaField.
+   * @remarks Legacy field names (`seconds`, `rounds`, `turns`, `startTime`, `startRound`,
+   * `startTurn`, `combat`, `type`, `duration`) remain readable on the initialized object via
+   * shim getters that emit compatibility warnings; see {@linkcode Duration} and {@linkcode DurationData}.
+   */
+  interface DurationSchema extends fields.DataSchema {
+    /**
+     * The amount of time the effect lasts, expressed in {@linkcode units}.
+     * @defaultValue `null`
+     */
+    value: fields.NumberField<{ required: true; nullable: true; integer: true; min: 0 }>;
+
+    /**
+     * The unit in which {@linkcode value} is measured.
+     * @defaultValue `"seconds"`
+     */
+    units: fields.StringField<
+      { required: true; initial: "seconds" },
+      CONST.ACTIVE_EFFECT_DURATION_UNITS | null | undefined,
+      CONST.ACTIVE_EFFECT_DURATION_UNITS,
+      CONST.ACTIVE_EFFECT_DURATION_UNITS
+    >;
+
+    /**
+     * The event that triggers expiry of this effect (`"turnStart"`, `"turnEnd"`,
+     * `"roundStart"`, `"roundEnd"`, `"combatStart"`, `"combatEnd"`, `"updateWorldTime"`,
+     * or a custom value registered via {@linkcode CONFIG.ActiveEffect.expiryEvents}).
+     * @defaultValue `"turnStart"` when `duration.value` is a number; otherwise `null`.
+     */
+    expiry: fields.StringField<{ required: true; blank: false; nullable: true }>;
+
+    /**
+     * Has the effect already expired? Tracked separately from the time/turn calculation
+     * so that effects can be flagged as expired without immediately being deleted.
+     * @defaultValue `false`
+     */
+    expired: fields.BooleanField;
+  }
+
+  /**
+   * Initialized form of the duration data. See {@linkcode Duration} for the prepared/derived form
+   * (which adds `seconds`, `remaining`, `secondsRemaining`, `label`, and `_worldTime`).
+   *
+   * @remarks Compatibility field aliases are readable via runtime shims that emit a compatibility
+   * warning. They are typed here as optional to match runtime behavior.
+   */
+  interface DurationData extends fields.SchemaField.InitializedData<DurationSchema> {
+    /**
+     * @deprecated "You are accessing ActiveEffect#duration#seconds. Duration data now has value and units fields." (since v14, until v16)
+     * @remarks Replaced by `duration.value` + `duration.units`.
+     */
+    seconds?: number | null;
+
+    /**
+     * @deprecated "You are accessing ActiveEffect#duration#rounds. Duration data now has value and units fields." (since v14, until v16)
+     * @remarks Replaced by `duration.value` + `duration.units`.
+     */
+    rounds?: number | null;
+
+    /**
+     * @deprecated "You are accessing ActiveEffect#duration#turns. Duration data now has value and units fields." (since v14, until v16)
+     * @remarks Replaced by `duration.value` + `duration.units`.
+     */
+    turns?: number | null;
+
+    /**
+     * @deprecated "You are accessing ActiveEffect#duration#startTime. Duration data now has value and units fields." (since v14, until v16)
+     * @remarks Replaced by `start.time`.
+     */
+    startTime?: number | null;
+
+    /**
+     * @deprecated "You are accessing ActiveEffect#duration#startRound. Duration data now has value and units fields." (since v14, until v16)
+     * @remarks Replaced by `start.round`.
+     */
+    startRound?: number | null;
+
+    /**
+     * @deprecated "You are accessing ActiveEffect#duration#startTurn. Duration data now has value and units fields." (since v14, until v16)
+     * @remarks Replaced by `start.turn`.
+     */
+    startTurn?: number | null;
+
+    /**
+     * @deprecated "You are accessing ActiveEffect#duration#combat. Duration data now has value and units fields." (since v14, until v16)
+     * @remarks Replaced by `start.combat`.
+     */
+    combat?: BaseCombat | null;
+  }
 
   namespace Database {
     /* ***********************************************
@@ -1146,31 +1249,72 @@ declare namespace ActiveEffect {
    *         ACTIVE-EFFECT-SPECIFIC TYPES          *
    *************************************************/
 
+  /**
+   * @deprecated since v14, will be removed in v16
+   * @remarks Replaced by {@linkcode CONST.ACTIVE_EFFECT_DURATION_UNITS}.
+   */
   type DurationType = "seconds" | "turns" | "none";
 
-  // Must be kept in sync with
+  /**
+   * Prepared (post-`prepareDerivedData`) form of duration data, as returned by
+   * {@linkcode ActiveEffect.updateDuration | ActiveEffect#updateDuration}.
+   *
+   * @remarks The prepared form adds derived fields (`seconds`, `remaining`, `secondsRemaining`,
+   * `label`) plus internal flags (`_worldTime`, `_combatTime`). Compatibility aliases (`type`,
+   * `duration`) are installed at the same time via runtime getters that emit a
+   * compatibility warning when accessed.
+   */
   interface Duration extends DurationData {
-    /** The duration type, either "seconds", "turns", or "none" */
-    type: DurationType;
+    /** The derived total duration of the effect in seconds (or `Infinity` for indefinite effects). */
+    seconds: number;
 
-    /** The total effect duration, in seconds of world time or as a decimal number with the format \{rounds\}.\{turns\} */
-    duration: number;
-
-    /** The remaining effect duration, in seconds of world time or as a decimal number with the format \{rounds\}.\{turns\} */
+    /** The remaining effect duration in the effect's own {@linkcode DurationSchema.units | units}. */
     remaining: number;
 
-    /** A formatted string label that represents the remaining duration */
+    /** The remaining effect duration in seconds (when computable). */
+    secondsRemaining?: number;
+
+    /** A formatted string label that represents the remaining duration. */
     label: string;
 
-    /** An internal flag used determine when to recompute seconds-based duration */
+    /** Internal flag used to determine when to recompute time-based duration. */
     _worldTime?: number;
 
-    /** An internal flag used determine when to recompute turns-based duration */
+    /** Internal flag used to determine when to recompute combat-based duration. */
     _combatTime?: number;
+
+    /**
+     * @deprecated "You are accessing ActiveEffectDuration#type, which is now at ActiveEffectDuration#units." (since v14, until v16)
+     * @remarks Replaced by {@linkcode DurationSchema.units | units}. The runtime shim returns
+     * `units` when `value` is a number, otherwise `"none"`.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    type?: DurationType;
+
+    /**
+     * @deprecated "You are accessing ActiveEffectDuration#duration, which is now at ActiveEffectDuration#seconds." (since v14, until v16)
+     * @remarks Replaced by {@linkcode Duration.seconds | seconds}. The runtime shim approximates
+     * remaining duration in seconds from `start.time` and `seconds`.
+     */
+    duration?: number | null;
   }
 
-  interface PrepareDurationReturn extends RequiredProps<IntentionalPartial<Duration>, "type"> {}
+  /**
+   * Return type of {@linkcode ActiveEffect._prepareDuration | ActiveEffect#_prepareDuration}; the
+   * partially-populated prepared duration before the final shim getters are installed.
+   */
+  interface PrepareDurationReturn extends RequiredProps<IntentionalPartial<Duration>, "units"> {}
 
+  /**
+   * Initialized form of the `start` SchemaField, returned by {@linkcode ActiveEffect.getEffectStart}.
+   * Aliased to {@linkcode StartData} for callers that prefer the Foundry-side typedef name.
+   */
+  interface EffectStartData extends StartData {}
+
+  /**
+   * @deprecated since v14, will be removed in v16
+   * @remarks Replaced by {@linkcode EffectStartData}, available via {@linkcode ActiveEffect.getEffectStart}.
+   */
   interface InitialDurationData {
     /** @defaultValue `game.time.worldTime` */
     startTime: number;
@@ -1182,41 +1326,175 @@ declare namespace ActiveEffect {
     startTurn?: number;
   }
 
+  /**
+   * @deprecated since v14, will be removed in v16
+   * @remarks Replaced by `{ start: EffectStartData }` returned by
+   * {@linkcode ActiveEffect.getEffectStart}.
+   */
   interface GetInitialDurationReturn {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     duration: InitialDurationData;
   }
 
+  /**
+   * Initialized form of a single change applied by an ActiveEffect.
+   *
+   * @remarks The numeric `mode` is still readable on each change object via a deprecated getter
+   * that maps it to the string `type` (`0` → `"custom"`, `1` → `"multiply"`, `2` → `"add"`,
+   * `3` → `"downgrade"`, `4` → `"upgrade"`, `5` → `"override"`). Each phase is its own priority
+   * group; application of a change in an earlier phase occurs before changes in a later phase
+   * regardless of priority. The `effect` back-reference is populated transiently by
+   * {@linkcode ActiveEffect.prepareBaseData | ActiveEffect#prepareBaseData} and is not part of
+   * persisted source data.
+   */
   interface ChangeData {
     /**
-     * The attribute path in the Actor or Item data which the change modifies
-     * @defaultValue `""`
+     * The attribute path in the Actor or Item data which the change modifies.
      */
     key: string;
 
     /**
-     * The value of the change effect
+     * The application phase under which this change is applied.
+     * @defaultValue `"initial"`
+     */
+    phase: string;
+
+    /**
+     * The modification type of this change. Validated to be a dot-delimited alphanumeric sequence
+     * or `"custom.{number}"`. Common core types include `"add"`, `"subtract"`, `"multiply"`,
+     * `"override"`, `"upgrade"`, `"downgrade"`, and `"custom"`.
+     * @defaultValue `"add"`
+     */
+    type: string;
+
+    /**
+     * The value of the change. This is modeled as an `AnyField`, so values may be any serializable
+     * structure.
      * @defaultValue `""`
      */
-    value: string;
-
-    // TODO (@LukeAbby): `undefined` is not valid. We can't pull directly from the schema because this interface is used inside of field methods.
+    value: unknown;
 
     /**
-     * The modification mode with which the change is applied
-     * @defaultValue `CONST.ACTIVE_EFFECT_MODES.ADD`
-     */
-    mode: CONST.ACTIVE_EFFECT_MODES;
-
-    /**
-     * The priority level with which this change is applied
+     * The priority level with which this change is applied within its `phase`. A `null` value is
+     * initialized to its type's default priority during {@linkcode ActiveEffect.prepareBaseData}.
      * @defaultValue `null`
      */
     priority: number | null | undefined;
+
+    /**
+     * The owning ActiveEffect, assigned during `prepareBaseData`. Not present on raw source.
+     * @internal
+     */
+    effect?: ActiveEffect.Implementation;
+
+    /**
+     * @deprecated "You are accessing the numeric #mode of an ActiveEffect change. Use the string #type instead." (since v14, until v16)
+     * @remarks Replaced by {@linkcode ChangeData.type}. The runtime shim maps numeric modes
+     * (`0`–`5`) to string types.
+     */
+    mode?: CONST.ACTIVE_EFFECT_MODES;
   }
 
   type ApplyFieldReturn<Field extends fields.DataField.Any | null | undefined> = Field extends fields.DataField.Any
     ? fields.DataField.InitializedTypeFor<Field>
     : unknown;
+
+  /**
+   * Configuration for a single change application phase. Resolved entries appear in
+   * {@linkcode ActiveEffect.CHANGE_PHASES}.
+   */
+  interface ChangePhaseConfig {
+    /** Localization key for the phase's display name. */
+    label: string;
+
+    /** Localization key for the phase's tooltip / hint text. */
+    hint: string;
+  }
+
+  /**
+   * Configuration for a single change type, as resolved by {@linkcode ActiveEffect.CHANGE_TYPES}.
+   * Custom types may be added via {@linkcode CONFIG.ActiveEffect.changeTypes}.
+   */
+  interface ChangeTypeConfig {
+    /** Display label or localization key for the change type. */
+    label: string;
+
+    /** Default priority assigned when a change of this type omits `priority`. */
+    defaultPriority: number;
+
+    /**
+     * Optional custom handler invoked by {@linkcode ActiveEffect.applyChange} instead of the
+     * core field-based application pipeline. When provided, the handler is fully responsible for
+     * modifying the target document.
+     */
+    handler: ChangeTypeHandler | null;
+
+    /** Optional custom renderer for the change row in the ActiveEffectConfig sheet. */
+    render: ChangeTypeRenderer | null;
+  }
+
+  /** Custom handler signature for {@linkcode ChangeTypeConfig.handler}. */
+  type ChangeTypeHandler = (
+    targetDoc: Document.Any,
+    change: ChangeData,
+    options: {
+      field: fields.DataField.Any | undefined;
+      replacementData: Record<string, unknown>;
+      modifyTarget: boolean;
+    },
+  ) => unknown;
+
+  /** Custom renderer signature for {@linkcode ChangeTypeConfig.render}. */
+  type ChangeTypeRenderer = (change: ChangeData, options: Record<string, unknown>) => string | HTMLElement;
+
+  /**
+   * Options for {@linkcode ActiveEffect.applyChange}.
+   */
+  interface ApplyChangeOptions {
+    /**
+     * Data used to resolve `@`-prefixed references in a string value.
+     * @defaultValue `{}`
+     */
+    replacementData?: Record<string, unknown>;
+
+    /**
+     * Modify the target Document with the updated value.
+     * @defaultValue `true`
+     */
+    modifyTarget?: boolean;
+  }
+
+  /**
+   * Options for {@linkcode ActiveEffect.applyChangeField}.
+   */
+  interface ApplyChangeFieldOptions extends ApplyChangeOptions {
+    /**
+     * The field to update. If not supplied, it is retrieved from the supplied Document via
+     * `targetDoc.getFieldForProperty(change.key)`.
+     */
+    field?: fields.DataField.Any;
+  }
+
+  /**
+   * Optional context passed to {@linkcode ActiveEffect.updateDuration | ActiveEffect#updateDuration}
+   * and the underlying `_prepareDuration` family. Carries the current combat round and turn when
+   * invoked from {@linkcode ActiveEffectRegistry.refresh}.
+   */
+  interface UpdateDurationContext {
+    /** Current combat round (overrides `game.combat.round`). */
+    round?: number;
+
+    /** Current combat turn (overrides `game.combat.turn`). */
+    turn?: number;
+  }
+
+  /**
+   * Optional context passed to {@linkcode ActiveEffect.isExpiryEvent | ActiveEffect#isExpiryEvent}.
+   */
+  interface IsExpiryEventContext {
+    /** The Combat associated with the event being evaluated. */
+    combat?: Combat.Implementation;
+  }
 
   /**
    * The arguments to construct the document.
@@ -1251,6 +1529,38 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
   constructor(data: ActiveEffect.CreateData<SubType>, context?: ActiveEffect.ConstructionContext);
 
   /**
+   * A cached compilation of core and registered application phases, along with their labels.
+   * Keys are phase identifiers (e.g. `"initial"`).
+   * @remarks Lazily compiled from {@linkcode CONFIG.ActiveEffect.phases | CONFIG.ActiveEffect.phases}
+   * and {@linkcode CONST.ACTIVE_EFFECT_CHANGE_PHASES} on first access.
+   */
+  static get CHANGE_PHASES(): Record<string, ActiveEffect.ChangePhaseConfig>;
+
+  /**
+   * A cached compilation of core and registered change types, along with their labels and default
+   * priorities. Keys are change-type identifiers (e.g. `"add"`, `"override"`).
+   * @remarks Lazily compiled from {@linkcode CONST.ACTIVE_EFFECT_CHANGE_TYPES} and
+   * {@linkcode CONFIG.ActiveEffect.changeTypes} on first access.
+   */
+  static get CHANGE_TYPES(): Record<string, ActiveEffect.ChangeTypeConfig>;
+
+  /**
+   * A cached compilation of core and registered expiry events. Keys are event identifiers
+   * (e.g. `"turnStart"`); values are localization labels.
+   * @remarks Lazily compiled from {@linkcode CONFIG.ActiveEffect.expiryEvents} and
+   * {@linkcode CONST.ACTIVE_EFFECT_EXPIRY_EVENTS} on first access.
+   */
+  static get EXPIRY_EVENTS(): Record<string, string>;
+
+  /**
+   * A helper class that accepts registration of ActiveEffects and manages their prepared duration
+   * and expiry data.
+   * @remarks The reference is frozen at class load via a non-writable, non-configurable
+   * `Object.defineProperty` descriptor and may not be reassigned by consumers.
+   */
+  static readonly registry: ActiveEffectRegistry;
+
+  /**
    * Create an ActiveEffect instance from some status effect ID.
    * Delegates to {@linkcode ActiveEffect._fromStatusEffect} to create the ActiveEffect instance
    * after creating the ActiveEffect data from the status effect data if `CONFIG.statusEffects`.
@@ -1283,6 +1593,17 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
   ): Promise<ActiveEffect.Implementation>;
 
   /**
+   * The Actor in which this ActiveEffect is embedded, either directly or as a grandchild
+   * (when the direct parent is an Item owned by the Actor).
+   */
+  get actor(): Actor.Implementation | null;
+
+  /**
+   * The Item in which this ActiveEffect is embedded.
+   */
+  get item(): Item.Implementation | null;
+
+  /**
    * Is there some system logic that makes this active effect ineligible for application?
    * @remarks Core's implementation defers to `system.isSuppressed` on a `TypeDataModel`, else `false`. As such all overrides should begin with `if (super.isSuppressed) return true;`
    */
@@ -1303,43 +1624,68 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
    */
   get modifiesActor(): boolean;
 
+  /**
+   * A thumbnail image path used to represent this document. Returns {@linkcode ActiveEffect.img | img}.
+   */
+  get thumbnail(): string;
+
+  /**
+   * Whether this Active Effect is eligible to be registered with the
+   * {@linkcode ActiveEffectRegistry}.
+   * @remarks `true` only if the effect is persisted, not in a compendium, embedded, active, has
+   * start data, is temporary, and is not already expired.
+   */
+  get isExpiryTrackable(): boolean;
+
+  /**
+   * Wires `change.effect` back-references and defaults `change.priority` from
+   * {@linkcode ActiveEffect.CHANGE_TYPES}, plus defaults `duration.value` to `Infinity` and `img`
+   * to {@linkcode BaseActiveEffect.DEFAULT_ICON}.
+   */
+  override prepareBaseData(): void;
+
   override prepareDerivedData(): void;
 
   /**
    * Update derived Active Effect duration data.
-   * Configure the remaining and label properties to be getters which lazily recompute only when necessary.
+   * @param context - Contextual information about what led to this call (e.g. the current round
+   *                  when invoked from {@linkcode ActiveEffectRegistry.refresh}).
+   * @remarks The returned object adds the `seconds`/`remaining`/`secondsRemaining`/`label`
+   * derived fields and installs compatibility-warning getters for the deprecated `type`/`duration`
+   * properties.
    */
-  // TODO: This adds two getter properties (`remaining` and `label`) to `this.duration` (a SchemaField property on the document)
-  updateDuration(): ActiveEffect.Duration;
+  updateDuration(context?: ActiveEffect.UpdateDurationContext): ActiveEffect.Duration;
 
   /**
-   * Determine whether the ActiveEffect requires a duration update.
-   * True if the worldTime has changed for an effect whose duration is tracked in seconds.
-   * True if the combat turn has changed for an effect tracked in turns where the effect target is a combatant.
+   * Compute derived data related to active effect duration. Dispatches to
+   * {@linkcode _prepareTimeBasedDuration} or {@linkcode _prepareCombatBasedDuration} based on
+   * `duration.units`.
+   * @param duration - Unprepared duration data; defaults to `this.duration`.
+   * @param context  - Contextual information indicating what led to this call.
+   * @internal
    */
-  protected _requiresDurationUpdate(): boolean;
-
-  /** @internal */
-  protected _prepareDuration(): ActiveEffect.PrepareDurationReturn;
-
-  /**
-   * Format a round+turn combination as a decimal
-   * @param round  - The round number
-   * @param turn   - The turn number
-   * @param nTurns - The maximum number of turns in the encounter
-   * @returns The decimal representation
-   * @private
-   */
-  protected _getCombatTime(round: number, turn: number, nTurns?: number): number;
+  protected _prepareDuration(
+    duration?: ActiveEffect.DurationData,
+    context?: ActiveEffect.UpdateDurationContext,
+  ): ActiveEffect.PrepareDurationReturn;
 
   /**
-   * Format a number of rounds and turns into a human-readable duration label
-   * @param rounds - The number of rounds
-   * @param turns  - The number of turns
-   * @returns The formatted label
-   * @private
+   * Prepare duration data from time-based (`"seconds"`, `"minutes"`, `"hours"`, etc.) source data.
+   * @internal
    */
-  protected _getDurationLabel(rounds: number, turns: number): string;
+  protected _prepareTimeBasedDuration(
+    duration: ActiveEffect.DurationData,
+    context?: ActiveEffect.UpdateDurationContext,
+  ): ActiveEffect.Duration;
+
+  /**
+   * Prepare duration data from combat-based (`"rounds"` or `"turns"`) source data.
+   * @internal
+   */
+  protected _prepareCombatBasedDuration(
+    duration: ActiveEffect.DurationData,
+    context?: ActiveEffect.UpdateDurationContext,
+  ): ActiveEffect.Duration;
 
   /**
    * Describe whether the ActiveEffect has a temporary duration based on combat turns or rounds.
@@ -1353,6 +1699,181 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
    */
   get sourceName(): string;
 
+  // `toCompendium` is overridden at runtime to clear `origin` and `start` from exported data
+  // unless `options.clearState === false`. The override does not change the inherited type
+  // signature so no declaration is added here.
+
+  /**
+   * Apply this ActiveEffect to a target Document, dispatching through any custom handler
+   * registered in {@linkcode ActiveEffect.CHANGE_TYPES} or falling back to
+   * {@linkcode applyChangeField} or {@linkcode _applyChangeUnguided}.
+   * @param targetDoc - The Document to which this effect should be applied.
+   * @param change    - The change data being applied.
+   * @param options   - Options affecting the change application.
+   * @returns A record of property keys and their updated values.
+   */
+  static applyChange(
+    targetDoc: Actor.Implementation | Item.Implementation | TokenDocument.Implementation,
+    change: ActiveEffect.ChangeData,
+    options?: ActiveEffect.ApplyChangeOptions,
+  ): Record<string, unknown>;
+
+  /**
+   * Apply EffectChangeData to a single field within a Document.
+   * @param targetDoc - The Document instance.
+   * @param change    - The change to apply.
+   * @param options   - Additional options. `field` is retrieved from the supplied Document via
+   *                    `targetDoc.getFieldForProperty(change.key)` if not provided.
+   * @returns The updated value, or `undefined` if the field-level apply returned `undefined`.
+   */
+  static applyChangeField(
+    targetDoc: Actor.Implementation | Item.Implementation | TokenDocument.Implementation,
+    change: ActiveEffect.ChangeData,
+    options?: ActiveEffect.ApplyChangeFieldOptions,
+  ): unknown;
+
+  /**
+   * Apply this ActiveEffect to a provided target using a heuristic to infer the value types based
+   * on the current value and/or the default value in the system's template.
+   * @param targetDoc - The Document or DataModel to which this effect should be applied.
+   * @param change    - The change data being applied.
+   * @param changes   - The aggregate update paths and their updated values.
+   * @param options   - Additional options.
+   */
+  protected static _applyChangeUnguided(
+    targetDoc: Actor.Implementation | Item.Implementation | TokenDocument.Implementation | DataModel.Any,
+    change: ActiveEffect.ChangeData,
+    changes: AnyMutableObject,
+    options?: ActiveEffect.ApplyChangeOptions,
+  ): void;
+
+  /**
+   * Recursively replace data references in a string change value. Defers to
+   * {@linkcode foundry.dice.Roll.defaultImplementation.replaceFormulaData | Roll.defaultImplementation.replaceFormulaData}.
+   * @param raw  - The raw value containing `@`-references.
+   * @param data - An object providing replacements.
+   * @returns The string with all data references resolved, or `null` if replacement failed.
+   */
+  protected static _replaceDataRefs(raw: string, data: Record<string, unknown>): string | null;
+
+  /**
+   * Apply an ActiveEffect that uses an `"add"` change type.
+   * @param targetDoc - The Document to which this effect should be applied
+   * @param change    - The change data being applied
+   * @param current   - The current value being modified
+   * @param delta     - The parsed value of the change object
+   * @param changes   - An object which accumulates changes to be applied
+   * @remarks Core's implementation does not use `targetDoc`.
+   */
+  protected static _applyChangeAdd(
+    targetDoc: Actor.Implementation | Item.Implementation | TokenDocument.Implementation,
+    change: ActiveEffect.ChangeData,
+    current: unknown,
+    delta: unknown,
+    changes: AnyMutableObject,
+  ): void;
+
+  /**
+   * Apply an ActiveEffect that uses a `"subtract"` change type.
+   * @param targetDoc - The Document to which this effect should be applied
+   * @param change    - The change data being applied
+   * @param current   - The current value being modified
+   * @param delta     - The parsed value of the change object
+   * @param changes   - An object which accumulates changes to be applied
+   * @remarks Core's implementation does not use `targetDoc`.
+   */
+  protected static _applyChangeSubtract(
+    targetDoc: Actor.Implementation | Item.Implementation | TokenDocument.Implementation,
+    change: ActiveEffect.ChangeData,
+    current: unknown,
+    delta: unknown,
+    changes: AnyMutableObject,
+  ): void;
+
+  /**
+   * Apply an ActiveEffect that uses a `"multiply"` change type. Changes which `"multiply"` must
+   * be numeric to allow for multiplication.
+   * @param targetDoc - The Document to which this effect should be applied
+   * @param change    - The change data being applied
+   * @param current   - The current value being modified
+   * @param delta     - The parsed value of the change object
+   * @param changes   - An object which accumulates changes to be applied
+   * @remarks Core's implementation does not use `targetDoc`.
+   */
+  protected static _applyChangeMultiply(
+    targetDoc: Actor.Implementation | Item.Implementation | TokenDocument.Implementation,
+    change: ActiveEffect.ChangeData,
+    current: unknown,
+    delta: unknown,
+    changes: AnyMutableObject,
+  ): void;
+
+  /**
+   * Apply an ActiveEffect that uses an `"override"` change type. Numeric data is overridden by
+   * numbers, while other data types are overridden by any value.
+   * @param targetDoc - The Document to which this effect should be applied
+   * @param change    - The change data being applied
+   * @param current   - The current value being modified
+   * @param delta     - The parsed value of the change object
+   * @param changes   - An object which accumulates changes to be applied
+   * @remarks Core's implementation does not use `targetDoc` or `current`.
+   */
+  protected static _applyChangeOverride(
+    targetDoc: Actor.Implementation | Item.Implementation | TokenDocument.Implementation,
+    change: ActiveEffect.ChangeData,
+    current: unknown,
+    delta: unknown,
+    changes: AnyMutableObject,
+  ): void;
+
+  /**
+   * Apply an ActiveEffect that uses an `"upgrade"` or `"downgrade"` change type. Changes which
+   * `"upgrade"` or `"downgrade"` must be numeric to allow for comparison.
+   * @param targetDoc - The Document to which this effect should be applied
+   * @param change    - The change data being applied
+   * @param current   - The current value being modified
+   * @param delta     - The parsed value of the change object
+   * @param changes   - An object which accumulates changes to be applied
+   * @remarks Core's implementation does not use `targetDoc`.
+   */
+  protected static _applyChangeUpgrade(
+    targetDoc: Actor.Implementation | Item.Implementation | TokenDocument.Implementation,
+    change: ActiveEffect.ChangeData,
+    current: unknown,
+    delta: unknown,
+    changes: AnyMutableObject,
+  ): void;
+
+  /**
+   * Apply an ActiveEffect that uses a `"custom"` change type. Calls the `applyActiveEffect` hook.
+   * @param targetDoc - The Document to which this effect should be applied
+   * @param change    - The change data being applied
+   * @param current   - The current value being modified
+   * @param delta     - The parsed value of the change object
+   * @param changes   - An object which accumulates changes to be applied
+   */
+  protected static _applyChangeCustom(
+    targetDoc: Actor.Implementation | Item.Implementation | TokenDocument.Implementation,
+    change: ActiveEffect.ChangeData,
+    current: unknown,
+    delta: unknown,
+    changes: AnyMutableObject,
+  ): void;
+
+  /**
+   * Determine whether the ActiveEffect's expiry event was reached. This check is independent of
+   * whether the duration was also reached.
+   * @param event   - The event that triggered this check.
+   * @param context - Contextual information for use in the determination.
+   */
+  isExpiryEvent(event: string, context?: ActiveEffect.IsExpiryEventContext): boolean;
+
+  /**
+   * Retrieve the initial start data for a newly-created ActiveEffect, based on the supplied
+   * Combat (defaulting to `game.combat`).
+   */
+  static getEffectStart(combat?: Combat.Implementation | null): ActiveEffect.EffectStartData;
+
   /**
    * Apply ActiveEffect.EffectChangeData to a field within a DataModel.
    * @param model  - The model instance.
@@ -1361,6 +1882,7 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
    * @returns The updated value.
    *
    * @remarks `field` default provided by `??= model.schema.getField(change.key)`
+   * @deprecated "You are accessing ActiveEffect.applyField, which has been moved to ActiveEffect.applyChangeField." (since v14, until v16)
    */
   static applyField<Field extends fields.DataField.Any | null | undefined = undefined>(
     model: DataModel.Any,
@@ -1373,7 +1895,7 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
    * @param actor  - The Actor to whom this effect should be applied
    * @param change - The change data being applied
    * @returns An object of property paths and their updated values.
-   * @remarks In the future this likely will become either an `Actor` method or a static one
+   * @deprecated "You are accessing ActiveEffect#apply, which has been moved to ActiveEffect.applyChange" (since v14, until v16)
    */
   apply(actor: Actor.Implementation, change: ActiveEffect.ChangeData): AnyMutableObject;
 
@@ -1383,34 +1905,13 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
    * @param actor   - The Actor to whom this effect should be applied.
    * @param change  - The change data being applied.
    * @param changes - The aggregate update paths and their updated values.
+   * @deprecated "You are accessing ActiveEffect#_applyLegacy, which has been moved to ActiveEffect._applyChangeUnguided" (since v14, until v16)
    */
   protected _applyLegacy(actor: Actor.Implementation, change: ActiveEffect.ChangeData, changes: AnyMutableObject): void;
 
-  /** @deprecated Foundry made this method truly private in v13 (this warning will be removed in v14) */
-  protected _castDelta(raw: never, type: never): never;
-
-  /** @deprecated Foundry made this method truly private in v13 (this warning will be removed in v14) */
-  protected _castArray(raw: never, type: never): never;
-
-  /** @deprecated Foundry made this method truly private in v13 (this warning will be removed in v14) */
-  protected _parseOrString(raw: never): never;
-
   /**
    * Apply an ActiveEffect that uses an ADD application mode.
-   * The way that effects are added depends on the data type of the current value.
-   *
-   * If the current value is null, the change value is assigned directly.
-   * If the current type is a string, the change value is concatenated.
-   * If the current type is a number, the change value is cast to numeric and added.
-   * If the current type is an array, the change value is appended to the existing array if it matches in type.
-   *
-   * @param actor   - The Actor to whom this effect should be applied
-   * @param change  - The change data being applied
-   * @param current - The current value being modified
-   * @param delta   - The parsed value of the change object
-   * @param changes - An object which accumulates changes to be applied
-   * @returns The resulting applied value
-   * @remarks Core's implementation does not use `actor`
+   * @deprecated "You are accessing ActiveEffect#_applyAdd, which has been moved to ActiveEffect._applyChangeAdd" (since v14, until v16)
    */
   protected _applyAdd(
     actor: Actor.Implementation,
@@ -1422,14 +1923,7 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
 
   /**
    * Apply an ActiveEffect that uses a MULTIPLY application mode.
-   * Changes which MULTIPLY must be numeric to allow for multiplication.
-   * @param actor   - The Actor to whom this effect should be applied
-   * @param change  - The change data being applied
-   * @param current - The current value being modified
-   * @param delta   - The parsed value of the change object
-   * @param changes - An object which accumulates changes to be applied
-   * @returns The resulting applied value
-   * @remarks Core's implementation does not use `actor`
+   * @deprecated "You are accessing ActiveEffect#_applyMultiply, which has been moved to ActiveEffect._applyChangeMultiply" (since v14, until v16)
    */
   protected _applyMultiply(
     actor: Actor.Implementation,
@@ -1441,14 +1935,7 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
 
   /**
    * Apply an ActiveEffect that uses an OVERRIDE application mode.
-   * Numeric data is overridden by numbers, while other data types are overridden by any value
-   * @param actor   - The Actor to whom this effect should be applied
-   * @param change  - The change data being applied
-   * @param current - The current value being modified
-   * @param delta   - The parsed value of the change object
-   * @param changes - An object which accumulates changes to be applied
-   * @returns The resulting applied value
-   * @remarks Core's implementation does not use `actor` or `current`
+   * @deprecated "You are accessing ActiveEffect#_applyOverride, which has been moved to ActiveEffect._applyChangeOverride" (since v14, until v16)
    */
   protected _applyOverride(
     actor: Actor.Implementation,
@@ -1459,15 +1946,8 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
   ): void;
 
   /**
-   * Apply an ActiveEffect that uses an UPGRADE, or DOWNGRADE application mode.
-   * Changes which UPGRADE or DOWNGRADE must be numeric to allow for comparison.
-   * @param actor   - The Actor to whom this effect should be applied
-   * @param change  - The change data being applied
-   * @param current - The current value being modified
-   * @param delta   - The parsed value of the change object
-   * @param changes - An object which accumulates changes to be applied
-   * @returns The resulting applied value
-   * @remarks Core's implementation does not use `actor`
+   * Apply an ActiveEffect that uses an UPGRADE or DOWNGRADE application mode.
+   * @deprecated "You are accessing ActiveEffect#_applyUpgrade, which has been moved to ActiveEffect._applyChangeUpgrade" (since v14, until v16)
    */
   protected _applyUpgrade(
     actor: Actor.Implementation,
@@ -1479,12 +1959,7 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
 
   /**
    * Apply an ActiveEffect that uses a CUSTOM application mode.
-   * @param actor   - The Actor to whom this effect should be applied
-   * @param change  - The change data being applied
-   * @param current - The current value being modified
-   * @param delta   - The parsed value of the change object
-   * @param changes - An object which accumulates changes to be applied
-   * @returns The resulting applied value
+   * @deprecated "You are accessing ActiveEffect#_applyCustom, which has been moved to ActiveEffect._applyChangeCustom" (since v14, until v16)
    */
   protected _applyCustom(
     actor: Actor.Implementation,
@@ -1496,7 +1971,9 @@ declare class ActiveEffect<out SubType extends ActiveEffect.SubType = ActiveEffe
 
   /**
    * Retrieve the initial duration configuration.
+   * @deprecated "You are accessing ActiveEffect.getInitialDuration, which has been moved to ActiveEffect.getEffectStart." (since v14, until v16)
    */
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   static getInitialDuration(): ActiveEffect.GetInitialDurationReturn;
 
   // _preCreate, _onCreate, _onUpdate, and _onDelete are all overridden but with no signature changes from BaseActiveEffect.

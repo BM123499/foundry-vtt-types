@@ -45,30 +45,38 @@ export const source = {
   name: "Add Suffix", // necessary for construction
   img: "icons/magic/symbols/star-yellow.webp",
   type: "base",
-  system: {},
-  changes: [
-    {
-      key: "name",
-      mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-      priority: 60,
-      value: " the Suffix",
-    },
-  ],
+  system: {
+    changes: [
+      {
+        key: "name",
+        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+        priority: 60,
+        value: " the Suffix",
+      },
+    ],
+  },
   disabled: true,
+  start: {
+    combat: null,
+    combatant: null,
+    initiative: null,
+    round: 1,
+    turn: 3,
+    time: 1700000,
+  },
   duration: {
-    startTime: 1700000,
-    seconds: 300,
-    combat: null, // TODO: make this the canonical test Combat ID eventually
-    rounds: 20,
-    turns: 3,
-    startRound: 1,
-    startTurn: 3,
+    value: 300,
+    units: "seconds",
+    expiry: "turnStart",
+    expired: false,
   },
   description: "Add a suffix to your name",
   origin: null, // TODO: possibly give this a real UUID in future
   tint: "#C8888C",
   transfer: true,
   statuses: ["invisible", "flying"],
+  showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.CONDITIONAL,
+  folder: null,
   sort: 7,
   flags: {
     core: {
@@ -97,30 +105,31 @@ export const nullishCreateData = {
   ...minimalCreateData, // necessary for construction
   img: null,
   type: null,
-  system: null,
-  changes: [
-    {
-      key: null,
-      mode: null,
-      priority: null,
-      value: null,
-    },
-  ],
+  system: {
+    changes: [
+      {
+        key: null,
+        mode: null,
+        priority: null,
+        value: null,
+      },
+    ],
+  },
   disabled: null,
+  start: null,
   duration: {
-    startTime: null,
-    seconds: null,
-    combat: null,
-    rounds: null,
-    turns: null,
-    startRound: null,
-    startTurn: null,
+    value: null,
+    units: null,
+    expiry: null,
+    expired: null,
   },
   description: null,
   origin: null,
   tint: null,
   transfer: null,
   statuses: null,
+  showIcon: null,
+  folder: null,
   sort: null,
   flags: null,
   _stats: {
@@ -462,23 +471,30 @@ export const operations = {
 
 export const realSource = {
   _id: "R5ro4AuNjcdWD56O",
-  changes: [
-    {
-      key: "system.attributes.ac.calc",
-      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
-      value: "unarmoredMonk",
-      priority: null,
-    },
-  ],
+  system: {
+    changes: [
+      {
+        key: "system.attributes.ac.calc",
+        mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+        value: "unarmoredMonk",
+        priority: null,
+      },
+    ],
+  },
   disabled: false,
-  duration: {
-    startTime: 0,
-    seconds: null,
+  start: {
     combat: null,
-    rounds: null,
-    turns: null,
-    startRound: null,
-    startTurn: null,
+    combatant: null,
+    initiative: null,
+    round: 0,
+    turn: 0,
+    time: 0,
+  },
+  duration: {
+    value: null,
+    units: "seconds",
+    expiry: null,
+    expired: false,
   },
   origin: "Item.cOdcNWy4hII029DT",
   transfer: true,
@@ -500,29 +516,37 @@ export const realSource = {
   },
   img: "icons/magic/control/silhouette-hold-change-blue.webp",
   type: "base",
-  system: {},
+  showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.CONDITIONAL,
+  folder: null,
   sort: 0,
 } as const satisfies Source;
 
 export const maximumSource = {
   _id: "R5ro4AuNjcdWD56O",
-  changes: [
-    {
-      key: "system.attributes.ac.calc",
-      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
-      value: "unarmoredMonk",
-      priority: 70,
-    },
-  ],
+  system: {
+    changes: [
+      {
+        key: "system.attributes.ac.calc",
+        mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+        value: "unarmoredMonk",
+        priority: 70,
+      },
+    ],
+  },
   disabled: false,
-  duration: {
-    startTime: 0,
-    seconds: 12,
+  start: {
     combat: "XXXXCOMBATIDXXXX",
-    rounds: 2,
-    turns: 7,
-    startRound: 1,
-    startTurn: 3,
+    combatant: "XXXXCOMBATANTIDX",
+    initiative: 17,
+    round: 1,
+    turn: 3,
+    time: 0,
+  },
+  duration: {
+    value: 12,
+    units: "seconds",
+    expiry: "turnStart",
+    expired: false,
   },
   origin: "Item.cOdcNWy4hII029DT",
   transfer: true,
@@ -548,8 +572,9 @@ export const maximumSource = {
   img: null,
   sort: 0,
   statuses: [],
-  system: {},
   type: "base",
+  showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS,
+  folder: null,
 } as const satisfies Source;
 
 // @ts-expect-error ActiveEffect requires name.
@@ -561,8 +586,37 @@ new ActiveEffect.implementation({});
 declare const model: DataModel.Any;
 declare const change: ActiveEffect.ChangeData;
 declare const aeContext: Document.ConstructionContext<ActiveEffect.Parent>;
+declare const someTargetDoc: Actor.Implementation | Item.Implementation | TokenDocument.Implementation;
 
 // Static methods native to this Document
+
+expectTypeOf(ActiveEffect.CHANGE_PHASES).toEqualTypeOf<Record<string, ActiveEffect.ChangePhaseConfig>>();
+expectTypeOf(ActiveEffect.CHANGE_TYPES).toEqualTypeOf<Record<string, ActiveEffect.ChangeTypeConfig>>();
+expectTypeOf(ActiveEffect.EXPIRY_EVENTS).toEqualTypeOf<Record<string, string>>();
+expectTypeOf(ActiveEffect.registry).toEqualTypeOf<foundry.helpers.ActiveEffectRegistry>();
+expectTypeOf(ActiveEffect.getEffectStart()).toEqualTypeOf<ActiveEffect.EffectStartData>();
+expectTypeOf(ActiveEffect.getEffectStart(null)).toEqualTypeOf<ActiveEffect.EffectStartData>();
+expectTypeOf(ActiveEffect.getEffectStart(game.combat ?? null)).toEqualTypeOf<ActiveEffect.EffectStartData>();
+
+expectTypeOf(
+  ActiveEffect.applyChange(someTargetDoc, change, {
+    modifyTarget: true,
+    replacementData: {},
+  }),
+).toEqualTypeOf<Record<string, unknown>>();
+expectTypeOf(
+  ActiveEffect.applyChangeField(someTargetDoc, change, {
+    modifyTarget: false,
+    replacementData: {},
+  }),
+).toEqualTypeOf<unknown>();
+expectTypeOf(ActiveEffect.applyChangeField(someTargetDoc, change)).toEqualTypeOf<unknown>();
+expectTypeOf(
+  ActiveEffect.applyChangeField(someTargetDoc, change, {
+    field: nf,
+    modifyTarget: true,
+  }),
+).toEqualTypeOf<unknown>();
 
 expectTypeOf(ActiveEffect.fromStatusEffect("flying")).toEqualTypeOf<Promise<ActiveEffect.Implementation>>();
 expectTypeOf(ActiveEffect.fromStatusEffect("flying", {})).toEqualTypeOf<Promise<ActiveEffect.Implementation>>();
@@ -586,6 +640,7 @@ expectTypeOf(ActiveEffect["_fromStatusEffect"]("flying", createData, aeContext))
 declare const sf: foundry.data.fields.StringField;
 declare const nf: foundry.data.fields.NumberField;
 declare const edf: foundry.data.fields.EmbeddedDataField<typeof foundry.data.LightData>;
+/* eslint-disable @typescript-eslint/no-deprecated -- Legacy alias surface is intentionally type-tested. */
 expectTypeOf(ActiveEffect.applyField(model, change)).toEqualTypeOf<unknown>();
 expectTypeOf(ActiveEffect.applyField(model, change, null)).toEqualTypeOf<unknown>();
 expectTypeOf(ActiveEffect.applyField(model, change, sf)).toEqualTypeOf<string | undefined>();
@@ -593,6 +648,7 @@ expectTypeOf(ActiveEffect.applyField(model, change, nf)).toEqualTypeOf<number | 
 expectTypeOf(ActiveEffect.applyField(model, change, edf)).toEqualTypeOf<foundry.data.LightData>();
 
 expectTypeOf(ActiveEffect.getInitialDuration()).toEqualTypeOf<ActiveEffect.GetInitialDurationReturn>();
+/* eslint-enable @typescript-eslint/no-deprecated */
 
 // ClientDocument static overrides
 
@@ -720,17 +776,33 @@ expectTypeOf(effect.modifiesActor).toEqualTypeOf<boolean>();
 // @ts-expect-error Only getter, no setter
 effect.modifiesActor = false;
 
+expectTypeOf(effect.thumbnail).toBeString();
+// @ts-expect-error Only getter, no setter
+effect.thumbnail = "";
+
+expectTypeOf(effect.isExpiryTrackable).toBeBoolean();
+// @ts-expect-error Only getter, no setter
+effect.isExpiryTrackable = false;
+
 expectTypeOf(effect.prepareBaseData()).toEqualTypeOf<void>();
 expectTypeOf(effect.prepareDerivedData()).toEqualTypeOf<void>();
 
 expectTypeOf(effect.updateDuration()).toEqualTypeOf<ActiveEffect.Duration>();
-expectTypeOf(effect["_requiresDurationUpdate"]()).toBeBoolean();
+expectTypeOf(effect.updateDuration({})).toEqualTypeOf<ActiveEffect.Duration>();
+expectTypeOf(effect.updateDuration({ round: 2, turn: 1 })).toEqualTypeOf<ActiveEffect.Duration>();
+
+const preparedDuration = effect.updateDuration();
+/* eslint-disable @typescript-eslint/no-deprecated -- Compatibility aliases are intentionally asserted. */
+expectTypeOf(preparedDuration.type).toEqualTypeOf<ActiveEffect.DurationType | undefined>();
+expectTypeOf(preparedDuration.duration).toEqualTypeOf<number | null | undefined>();
+/* eslint-enable @typescript-eslint/no-deprecated */
+
+expectTypeOf(effect.isExpiryEvent("turnEnd")).toBeBoolean();
+expectTypeOf(effect.isExpiryEvent("turnEnd", {})).toBeBoolean();
+if (game.combat) {
+  expectTypeOf(effect.isExpiryEvent("turnStart", { combat: game.combat })).toBeBoolean();
+}
 expectTypeOf(effect["_prepareDuration"]()).toEqualTypeOf<ActiveEffect.PrepareDurationReturn>();
-
-expectTypeOf(effect["_getCombatTime"](0, 3)).toBeNumber();
-expectTypeOf(effect["_getCombatTime"](0, 7, 3)).toBeNumber();
-
-expectTypeOf(effect["_getDurationLabel"](2, 4)).toBeString();
 
 expectTypeOf(effect.isTemporary).toEqualTypeOf<boolean>();
 // @ts-expect-error Only getter, no setter
@@ -740,6 +812,7 @@ expectTypeOf(effect.sourceName).toEqualTypeOf<string>();
 // @ts-expect-error Only getter, no setter
 effect.sourceName = "foo";
 
+/* eslint-disable @typescript-eslint/no-deprecated -- Legacy aliases remain supported until v16. */
 expectTypeOf(effect.apply(someActor, change)).toEqualTypeOf<AnyMutableObject>();
 expectTypeOf(effect["_applyLegacy"](someActor, change, {})).toBeVoid();
 
@@ -748,6 +821,7 @@ expectTypeOf(effect["_applyMultiply"](someActor, change, 2, 4, {})).toBeVoid();
 expectTypeOf(effect["_applyOverride"](someActor, change, "foo", "bar", {})).toBeVoid();
 expectTypeOf(effect["_applyUpgrade"](someActor, change, 5, 9, {})).toBeVoid();
 expectTypeOf(effect["_applyCustom"](someActor, change, { baz: 17 }, { fizz: false }, {})).toBeVoid();
+/* eslint-enable @typescript-eslint/no-deprecated */
 
 // getFlag override has no type changes, handled in BaseActiveEffect tests
 

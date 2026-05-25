@@ -807,3 +807,6 @@ export {
   TextureData,
   TombstoneData,
 };
+
+// eslint-disable-next-line import-x/extensions -- Declaration re-export targets the runtime module path.
+export { default as ActiveEffectTypeDataModel } from "./active-effect.mjs";
