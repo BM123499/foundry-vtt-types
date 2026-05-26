@@ -352,6 +352,7 @@ export type DEFAULT_TOKEN = typeof DEFAULT_TOKEN;
  * Define the allowed Document class types.
  */
 export declare const PRIMARY_DOCUMENT_TYPES: readonly [
+  "ActiveEffect",
   "Actor",
   "Adventure",
   "Cards",
@@ -599,6 +600,12 @@ export declare const MOVEMENT_DIRECTIONS: Readonly<{
 
   /** @remarks `0x2 | 0x8` */
   DOWN_RIGHT: 0xa & MOVEMENT_DIRECTIONS;
+
+  /** Move vertically downward. */
+  DESCEND: 0x10 & MOVEMENT_DIRECTIONS;
+
+  /** Move vertically upward. */
+  ASCEND: 0x20 & MOVEMENT_DIRECTIONS;
 }>;
 export type MOVEMENT_DIRECTIONS = Brand<number, "constants.MOVEMENT_DIRECTIONS">;
 

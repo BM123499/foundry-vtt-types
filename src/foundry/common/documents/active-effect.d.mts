@@ -268,8 +268,7 @@ declare abstract class BaseActiveEffect<
    */
   protected static override _onCreateDocuments(
     documents: ActiveEffect.Implementation[],
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    context: BaseActiveEffect.Database.OnCreateDocumentsOperation,
+    context: BaseActiveEffect.Database.OnCreateOperation,
   ): Promise<void>;
 
   /**
@@ -278,8 +277,7 @@ declare abstract class BaseActiveEffect<
    */
   protected static override _onUpdateDocuments(
     documents: ActiveEffect.Stored[],
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    context: BaseActiveEffect.Database.OnUpdateDocumentsOperation,
+    context: BaseActiveEffect.Database.OnUpdateOperation,
   ): Promise<void>;
 
   /**
@@ -288,8 +286,7 @@ declare abstract class BaseActiveEffect<
    */
   protected static override _onDeleteDocuments(
     documents: ActiveEffect.Stored[],
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    context: BaseActiveEffect.Database.OnDeleteDocumentsOperation,
+    context: BaseActiveEffect.Database.OnDeleteOperation,
   ): Promise<void>;
 
   /* DataModel overrides */

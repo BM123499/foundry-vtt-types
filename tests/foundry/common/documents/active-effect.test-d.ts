@@ -199,7 +199,7 @@ expectTypeOf(schema.folder).toEqualTypeOf<fields.ForeignDocumentField<typeof fou
 declare const changeSchemaAlias: ActiveEffect.ChangeSchema;
 expectTypeOf(changeSchemaAlias).toEqualTypeOf<ActiveEffectTypeDataModel.ChangeSchema>();
 
-// DurationData still types the deprecated v13 properties as optional compatibility shims.
+// DurationData still types deprecated duration aliases as optional compatibility shims.
 declare const durationData: ActiveEffect.DurationData;
 expectTypeOf(durationData.value).toEqualTypeOf<number | null>();
 expectTypeOf(durationData.units).toEqualTypeOf<CONST.ACTIVE_EFFECT_DURATION_UNITS>();
@@ -252,7 +252,7 @@ expectTypeOf(TestActiveEffect.createDocuments([])).branded.toEqualTypeOf<Promise
 expectTypeOf(TestActiveEffect.updateDocuments([])).toEqualTypeOf<Promise<ActiveEffect.Stored[]>>();
 expectTypeOf(TestActiveEffect.deleteDocuments([])).toEqualTypeOf<Promise<ActiveEffect.Stored[]>>();
 
-// TODO: should error, AE creation requires a parent
+// TODO: tighten create constraints for embedded-creation contexts.
 expectTypeOf(TestActiveEffect.create(fullSource)).branded.toEqualTypeOf<Promise<ActiveEffect.Stored | undefined>>();
 expectTypeOf(TestActiveEffect.create(fullSource)).branded.toEqualTypeOf<Promise<ActiveEffect.Stored | undefined>>();
 expectTypeOf(TestActiveEffect.create(fullSource)).branded.toEqualTypeOf<Promise<ActiveEffect.Stored | undefined>>();

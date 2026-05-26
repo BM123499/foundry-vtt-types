@@ -13,8 +13,8 @@ expectTypeOf(schema.effects).toEqualTypeOf<
 >();
 
 const events = foundry.data.regionBehaviors.ApplyActiveEffectRegionBehaviorType.events;
-expectTypeOf(events).toEqualTypeOf<Record<string, RegionBehaviorType.EventBehaviorStaticHandler>>();
-expectTypeOf(events["tokenEnter"]).toEqualTypeOf<RegionBehaviorType.EventBehaviorStaticHandler | undefined>();
-expectTypeOf(events["tokenExit"]).toEqualTypeOf<RegionBehaviorType.EventBehaviorStaticHandler | undefined>();
+expectTypeOf(events).toEqualTypeOf<foundry.data.regionBehaviors.ApplyActiveEffectRegionBehaviorType.Events>();
+expectTypeOf(events.tokenEnter).toEqualTypeOf<RegionBehaviorType.EventBehaviorStaticHandler>();
+expectTypeOf(events.tokenExit).toEqualTypeOf<RegionBehaviorType.EventBehaviorStaticHandler>();
 expectTypeOf<"tokenEnter">().toExtend<keyof typeof events>();
 expectTypeOf<"tokenExit">().toExtend<keyof typeof events>();

@@ -194,7 +194,7 @@ export const operations = {
     ({
       ...database.createDocumentsOperationBase,
       ...docCreateOpProps,
-      parent, // actual creation requires a parent on v13, where AEs are not yet primary documents
+      parent, // include parent to type-check embedded creation flows
     }) satisfies ActiveEffect.Database.CreateDocumentsOperation,
 
   minimalBackendCreateOperation: ({ data, parent = null }: { data: CreateInput[]; parent?: Parent }) =>
@@ -236,16 +236,6 @@ export const operations = {
       data,
       parent,
     }) satisfies ActiveEffect.Database.PreCreateOperation,
-
-  // TODO: remove in v14
-  onCreateDocumentsOperation: ({ data, parent = null }: { data: Implementation[]; parent?: Parent }) =>
-    ({
-      ...database.onCreateDocumentsOperationBase,
-      ...docCreateOpProps,
-      data,
-      parent,
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-    }) satisfies ActiveEffect.Database.OnCreateDocumentsOperation,
 
   minimalOnCreateOptions: ({ parent = null }: { parent?: Parent } = {}) =>
     ({
@@ -330,16 +320,6 @@ export const operations = {
       parent,
       updates,
     }) satisfies ActiveEffect.Database.PreUpdateOperation,
-
-  // TODO: remove in v14
-  onUpdateDocumentsOperation: ({ parent = null, updates }: { parent?: Parent; updates: UpdateData[] }) =>
-    ({
-      ...database.onUpdateDocumentsOperationBase,
-      ...docCreateOpProps,
-      parent,
-      updates,
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-    }) satisfies ActiveEffect.Database.OnUpdateDocumentsOperation,
 
   minimalOnUpdateOptions: ({ parent = null }: { parent?: Parent } = {}) =>
     ({
@@ -429,16 +409,6 @@ export const operations = {
       ids,
       parent,
     }) satisfies ActiveEffect.Database.PreDeleteOperation,
-
-  // TODO: remove in v14
-  onDeleteDocumentsOperation: ({ ids, parent = null }: { ids: string[]; parent?: Parent }) =>
-    ({
-      ...database.preDeleteOperationBase,
-      ...docDeleteOpProps,
-      ids,
-      parent,
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-    }) satisfies ActiveEffect.Database.OnDeleteDocumentsOperation,
 
   minimalOnDeleteOptions: ({ parent = null }: { parent?: Parent }) =>
     ({
@@ -654,18 +624,16 @@ expectTypeOf(ActiveEffect.getInitialDuration()).toEqualTypeOf<ActiveEffect.GetIn
 
 declare const someItem: Item.Implementation;
 
-// @ts-expect-error `defaultName` requires a `pack` or `parent`.
-ActiveEffect.defaultName();
+expectTypeOf(ActiveEffect.defaultName()).toBeString();
 
 expectTypeOf(ActiveEffect.defaultName({ pack: "some.pack", parent: someItem, type: "base" })).toBeString();
 expectTypeOf(ActiveEffect.defaultName({ pack: undefined, parent: undefined, type: undefined })).toBeString();
 expectTypeOf(ActiveEffect.defaultName({ pack: null, parent: null, type: undefined })).toBeString();
 
-// Note: this call will fail at runtime but a validator function to require `pack` or `parent` has not yet been written.
+// The base overload accepts an empty context object.
 expectTypeOf(ActiveEffect.defaultName({})).toBeString();
 
-// @ts-expect-error `ActiveEffect.createDialog` requires `createOptions` for pack information.
-await ActiveEffect.createDialog({});
+expectTypeOf(ActiveEffect.createDialog({})).toEqualTypeOf<Promise<ActiveEffect.Stored | null>>();
 
 declare const someActor: Actor.Implementation;
 expectTypeOf(

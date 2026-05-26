@@ -6,6 +6,11 @@ declare namespace ApplyActiveEffectRegionBehaviorType {
     /** The Active Effects that are applied to Tokens within the Region. */
     effects: fields.SetField<fields.DocumentUUIDField<{ type: "ActiveEffect"; nullable: false }>>;
   }
+
+  interface Events extends Record<string, RegionBehaviorType.EventBehaviorStaticHandler> {
+    tokenEnter: RegionBehaviorType.EventBehaviorStaticHandler;
+    tokenExit: RegionBehaviorType.EventBehaviorStaticHandler;
+  }
 }
 
 /**
@@ -22,7 +27,7 @@ declare class ApplyActiveEffectRegionBehaviorType extends RegionBehaviorType<App
 
   static override defineSchema(): ApplyActiveEffectRegionBehaviorType.Schema;
 
-  static override events: Record<string, RegionBehaviorType.EventBehaviorStaticHandler>;
+  static override events: ApplyActiveEffectRegionBehaviorType.Events;
 }
 
 export default ApplyActiveEffectRegionBehaviorType;
