@@ -372,19 +372,6 @@ export declare const PRIMARY_DOCUMENT_TYPES: readonly [
 export type PRIMARY_DOCUMENT_TYPES = ValueOf<typeof PRIMARY_DOCUMENT_TYPES>;
 
 /**
- * The available Fog of War exploration modes on a Scene.
- */
-export declare const FOG_EXPLORATION_MODES: Readonly<{
-  /** The fog of war exploration is disabled. */
-  DISABLED: 0;
-  /** The fog of war exploration is enabled for this scene and each user has its own personal fog of war. */
-  INDIVIDUAL: 1;
-  /** The fog of war exploration is enabled for this scene and shared among all users. */
-  SHARED: 2;
-}>;
-export type FOG_EXPLORATION_MODES = ValueOf<typeof FOG_EXPLORATION_MODES>;
-
-/**
  * The embedded Document types.
  */
 export const EMBEDDED_DOCUMENT_TYPES: readonly [
@@ -455,6 +442,21 @@ export declare const COMPENDIUM_DOCUMENT_TYPES: readonly [
   "Scene",
 ];
 export type COMPENDIUM_DOCUMENT_TYPES = ValueOf<typeof COMPENDIUM_DOCUMENT_TYPES>;
+
+/**
+ * Define the Fog Exploration modes available for a given Scene.
+ */
+export declare const FOG_EXPLORATION_MODES: Readonly<{
+  /** Fog of war exploration is disabled. */
+  DISABLED: 0;
+
+  /** Fog of war exploration is enabled and each User has their own personal fog of war. */
+  INDIVIDUAL: 1;
+
+  /** Fog of war exploration is enabled and shared among all Users. */
+  SHARED: 2;
+}>;
+export type FOG_EXPLORATION_MODES = ValueOf<typeof FOG_EXPLORATION_MODES>;
 
 /**
  * Define the allowed ownership levels for a Document.

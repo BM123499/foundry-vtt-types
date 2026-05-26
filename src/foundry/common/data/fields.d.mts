@@ -2987,10 +2987,7 @@ declare class DataModelSchemaField<
  * @template InitializedType - the type of the initialized values of the EmbeddedDataField
  * @template PersistedType   - the type of the persisted values of the EmbeddedDataField
  *
- * The immediate parent class is {@linkcode DataModelSchemaField} rather than
- * {@linkcode SchemaField} so that document root schemas and embedded data models share
- * cleaning/migration behavior. The public surface of `EmbeddedDataField` is unchanged.
- *
+ * @remarks
  * Defaults:
  * - AssignmentType: `SchemaField.AssignmentType<ModelType["schema"]["fields"]> | null | undefined`
  * - InitializedType: `SchemaField.InitializedType<ModelType["schema"]["fields"]>`

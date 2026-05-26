@@ -1032,12 +1032,9 @@ declare namespace MeasuredTemplateDocument {
 /**
  * The client-side MeasuredTemplate document which extends the common BaseMeasuredTemplate document model.
  *
- * @deprecated Since V14, MeasuredTemplate functionality is absorbed into {@linkcode foundry.documents.RegionDocument}
- * workflows. Scene no longer exposes a `templates` embedded collection and `"MeasuredTemplate"` is no longer in
- * {@linkcode CONST.EMBEDDED_DOCUMENT_TYPES}. This class is retained for backward compatibility and scheduled for
- * removal in v16. Use {@linkcode foundry.documents.RegionDocument} with appropriate Region behaviors instead.
+ * @deprecated MeasuredTemplate functionality is absorbed into {@linkcode foundry.documents.RegionDocument}; use
+ * Region documents with appropriate Region behaviors instead. (since v14, until v16)
  *
- * @see {@linkcode Scene}                     The Scene document type which formerly contained MeasuredTemplate documents
  * @see {@linkcode MeasuredTemplateConfig}    The MeasuredTemplate configuration application
  */
 // eslint-disable-next-line @typescript-eslint/no-deprecated
@@ -1087,9 +1084,8 @@ declare class MeasuredTemplateDocument extends BaseMeasuredTemplate.Internal.Can
     data: MeasuredTemplateDocument.CreateDialogData | undefined,
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     createOptions: MeasuredTemplateDocument.Database.CreateDocumentsOperation<Temporary>,
-    options?: Options,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : Promise<MeasuredTemplateDocument.CreateDialogReturn<Temporary, Options>>;
+    options?: Options, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): Promise<MeasuredTemplateDocument.CreateDialogReturn<Temporary, Options>>;
 
   /**
    * @deprecated "The `ClientDocument.createDialog` signature has changed. It now accepts database operation options in its second
@@ -1106,16 +1102,14 @@ declare class MeasuredTemplateDocument extends BaseMeasuredTemplate.Internal.Can
     data: MeasuredTemplateDocument.CreateDialogData | undefined,
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     createOptions: MeasuredTemplateDocument.CreateDialogDeprecatedOptions<Temporary>,
-    options?: Options,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : Promise<MeasuredTemplateDocument.CreateDialogReturn<Temporary, Options>>;
+    options?: Options, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): Promise<MeasuredTemplateDocument.CreateDialogReturn<Temporary, Options>>;
 
   override deleteDialog<Options extends DialogV2.ConfirmConfig | undefined = undefined>(
     options?: Options,
     // eslint-disable-next-line @typescript-eslint/no-deprecated
-    operation?: MeasuredTemplateDocument.Database.DeleteOneDocumentOperation,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : Promise<MeasuredTemplateDocument.DeleteDialogReturn<Options>>;
+    operation?: MeasuredTemplateDocument.Database.DeleteOneDocumentOperation, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): Promise<MeasuredTemplateDocument.DeleteDialogReturn<Options>>;
 
   /**
    * @deprecated "`options` is now an object containing entries supported by {@linkcode DialogV2.confirm | DialogV2.confirm}."
@@ -1127,23 +1121,20 @@ declare class MeasuredTemplateDocument extends BaseMeasuredTemplate.Internal.Can
   override deleteDialog<Options extends Document.DeleteDialogDeprecatedConfig | undefined = undefined>(
     options?: Options,
     // eslint-disable-next-line @typescript-eslint/no-deprecated
-    operation?: MeasuredTemplateDocument.Database.DeleteOneDocumentOperation,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : Promise<MeasuredTemplateDocument.DeleteDialogReturn<Options>>;
+    operation?: MeasuredTemplateDocument.Database.DeleteOneDocumentOperation, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): Promise<MeasuredTemplateDocument.DeleteDialogReturn<Options>>;
 
   static override fromDropData(
     // eslint-disable-next-line @typescript-eslint/no-deprecated
-    data: MeasuredTemplateDocument.DropData,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : Promise<MeasuredTemplateDocument.Implementation | undefined>;
+    data: MeasuredTemplateDocument.DropData, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): Promise<MeasuredTemplateDocument.Implementation | undefined>;
 
   static override fromImport(
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     source: MeasuredTemplateDocument.Source,
     // eslint-disable-next-line @typescript-eslint/no-deprecated
-    context?: Document.FromImportContext<MeasuredTemplateDocument.Parent>,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : Promise<MeasuredTemplateDocument.Implementation>;
+    context?: Document.FromImportContext<MeasuredTemplateDocument.Parent>, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): Promise<MeasuredTemplateDocument.Implementation>;
 
   override _onClickDocumentLink(event: MouseEvent): ClientDocument.OnClickDocumentLinkReturn;
 }

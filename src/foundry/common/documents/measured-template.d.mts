@@ -6,9 +6,8 @@ import type { SchemaField } from "#common/data/fields.d.mts";
  * The Document definition for a MeasuredTemplate.
  * Defines the DataSchema and common behaviors for a MeasuredTemplate which are shared between both client and server.
  *
- * @deprecated Since V14, MeasuredTemplate is absorbed into {@linkcode foundry.documents.Region} workflows and is no
- * longer one of {@linkcode CONST.EMBEDDED_DOCUMENT_TYPES}. The class continues to exist for backward compatibility but
- * is scheduled for removal in v16. Use {@linkcode foundry.documents.Region} + Region behaviors instead.
+ * @deprecated MeasuredTemplate functionality is absorbed into {@linkcode foundry.documents.Region}; use Region
+ * documents with appropriate Region behaviors instead. (since v14, until v16)
  */
 // Note(LukeAbby): You may wonder why documents don't simply pass the `Parent` generic parameter.
 // This pattern evolved from trying to avoid circular loops and even internal tsc errors.
@@ -137,24 +136,21 @@ declare abstract class BaseMeasuredTemplate extends Document<"MeasuredTemplate",
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     data: BaseMeasuredTemplate.CreateInput[],
     // eslint-disable-next-line @typescript-eslint/no-deprecated
-    operation?: BaseMeasuredTemplate.Database.CreateDocumentsOperation<Temporary>,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : Promise<Array<BaseMeasuredTemplate.TemporaryIf<Temporary>>>;
+    operation?: BaseMeasuredTemplate.Database.CreateDocumentsOperation<Temporary>, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): Promise<Array<BaseMeasuredTemplate.TemporaryIf<Temporary>>>;
 
   static override updateDocuments(
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     updates: BaseMeasuredTemplate.UpdateInput[],
     // eslint-disable-next-line @typescript-eslint/no-deprecated
-    operation?: BaseMeasuredTemplate.Database.UpdateManyDocumentsOperation,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : Promise<Array<MeasuredTemplateDocument.Stored>>;
+    operation?: BaseMeasuredTemplate.Database.UpdateManyDocumentsOperation, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): Promise<Array<MeasuredTemplateDocument.Stored>>;
 
   static override deleteDocuments(
     ids: readonly string[],
     // eslint-disable-next-line @typescript-eslint/no-deprecated
-    operation?: BaseMeasuredTemplate.Database.DeleteManyDocumentsOperation,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : Promise<Array<MeasuredTemplateDocument.Stored>>;
+    operation?: BaseMeasuredTemplate.Database.DeleteManyDocumentsOperation, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): Promise<Array<MeasuredTemplateDocument.Stored>>;
 
   static override create<
     // eslint-disable-next-line @typescript-eslint/no-deprecated
@@ -163,9 +159,8 @@ declare abstract class BaseMeasuredTemplate extends Document<"MeasuredTemplate",
   >(
     data: Data,
     // eslint-disable-next-line @typescript-eslint/no-deprecated
-    operation?: BaseMeasuredTemplate.Database.CreateDocumentsOperation<Temporary>,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : Promise<BaseMeasuredTemplate.CreateReturn<Data, Temporary>>;
+    operation?: BaseMeasuredTemplate.Database.CreateDocumentsOperation<Temporary>, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): Promise<BaseMeasuredTemplate.CreateReturn<Data, Temporary>>;
 
   override update(
     // eslint-disable-next-line @typescript-eslint/no-deprecated
@@ -187,9 +182,8 @@ declare abstract class BaseMeasuredTemplate extends Document<"MeasuredTemplate",
   // eslint-disable-next-line @typescript-eslint/no-deprecated
   override getFlag<Scope extends BaseMeasuredTemplate.Flags.Scope, Key extends BaseMeasuredTemplate.Flags.Key<Scope>>(
     scope: Scope,
-    key: Key,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : BaseMeasuredTemplate.Flags.Get<Scope, Key>;
+    key: Key, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): BaseMeasuredTemplate.Flags.Get<Scope, Key>;
 
   override setFlag<
     // eslint-disable-next-line @typescript-eslint/no-deprecated
@@ -342,9 +336,8 @@ declare abstract class BaseMeasuredTemplate extends Document<"MeasuredTemplate",
   static override fromSource(
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     source: BaseMeasuredTemplate.CreateData,
-    context?: DataModel.FromSourceOptions,
-  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
-  : MeasuredTemplateDocument.Implementation;
+    context?: DataModel.FromSourceOptions, // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ): MeasuredTemplateDocument.Implementation;
 
   // eslint-disable-next-line @typescript-eslint/no-deprecated
   static override fromJSON(json: string): MeasuredTemplateDocument.Implementation;

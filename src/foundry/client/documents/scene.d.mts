@@ -85,33 +85,23 @@ declare namespace Scene {
   namespace Metadata {
     /**
      * The embedded metadata.
-     *
-     * Includes `Level: "levels"`. `MeasuredTemplate: "templates"` is retained for
-     * backward compatibility — the underlying {@linkcode foundry.documents.MeasuredTemplateDocument}
-     * class is `@deprecated since v14` (functionality absorbed into {@linkcode foundry.documents.Region}),
-     * but the registry entry survives so existing types and PlaceableObject typings continue to resolve.
      */
     interface Embedded {
       AmbientLight: "lights";
       AmbientSound: "sounds";
       Drawing: "drawings";
-
-      /**
-       * Embedded Level documents. See {@linkcode Level} and {@linkcode Scene.Schema.levels}.
-       */
       Level: "levels";
-
-      /**
-       * @deprecated `MeasuredTemplate` was removed from {@linkcode foundry.documents.Scene}'s runtime
-       * `metadata.embedded` in V14 (MeasuredTemplate functionality moved into Region). Kept here
-       * solely for backward type-compatibility; new code should use Region instead.
-       */
-      MeasuredTemplate: "templates";
       Note: "notes";
       Region: "regions";
       Tile: "tiles";
       Token: "tokens";
       Wall: "walls";
+
+      /**
+       * @deprecated MeasuredTemplate functionality is absorbed into
+       * {@linkcode foundry.documents.Region}; use Region documents instead. (since v14, until v16)
+       */
+      MeasuredTemplate: "templates";
     }
   }
 
@@ -130,7 +120,7 @@ declare namespace Scene {
     | "AmbientSound"
     | "Drawing"
     | "Level"
-    /** @deprecated since v14 — MeasuredTemplate is absorbed into Region. */
+    /** @deprecated Use Region instead. (since v14, until v16) */
     | "MeasuredTemplate"
     | "Note"
     | "Region"
@@ -540,31 +530,30 @@ declare namespace Scene {
     navName: fields.HTMLField<{ textSearch: true }>;
 
     /**
-     * An image or video file that provides the background texture for the scene.
+     * Background texture for the scene. Read from the first {@linkcode Level}'s `background` and
+     * `textures` via {@linkcode BaseScene.shimData}'s source-level getter, together with
+     * `shiftX`/`shiftY` as `background.offsetX`/`offsetY`.
      *
-     * @deprecated Since V14 background imagery lives on the first {@linkcode Level} of the Scene.
-     * V14's {@linkcode BaseScene.shimData} installs a getter on `_source` that composes a
-     * `background` object from `levels[0].background` plus `shiftX`/`shiftY`. Kept here for
-     * backward compatibility — new code should read the active Level's `background` instead.
+     * @deprecated Background imagery lives on the active Level's `background`; read it from there
+     * instead. (since v14, until v16)
      * @defaultValue see {@linkcode TextureData}
      */
     background: TextureData;
 
     /**
-     * An image or video file path providing foreground media for the scene.
+     * An image or video file path providing foreground media for the scene. Read from the first
+     * {@linkcode Level}'s `foreground.src` via {@linkcode BaseScene.shimData}.
      *
-     * @deprecated Since V14 foreground imagery lives on the first {@linkcode Level} (`fog.src`).
-     * V14's source-level shim points `foreground` at `levels[0].foreground.src`.
+     * @deprecated Foreground imagery lives on the active Level's `foreground.src`. (since v14, until v16)
      * @defaultValue `null`
      */
     foreground: fields.FilePathField<{ categories: ["IMAGE", "VIDEO"]; virtual: true }>;
 
     /**
-     * The elevation of the foreground layer where overhead tiles reside.
+     * Elevation of the foreground layer where overhead tiles reside. Read from the first
+     * {@linkcode Level}'s `elevation.top` via {@linkcode BaseScene.shimData}.
      *
-     * @deprecated Since V14 foreground elevation is the top of the first Level's
-     * `elevation` band. V14's source-level shim points `foregroundElevation` at
-     * `levels[0].elevation.top`.
+     * @deprecated Foreground elevation lives on the active Level's `elevation.top`. (since v14, until v16)
      * @defaultValue `null`
      */
     foregroundElevation: fields.NumberField<{ required: false; positive: true; integer: true }>;
@@ -595,17 +584,17 @@ declare namespace Scene {
     padding: fields.NumberField<{ required: true; nullable: false; min: 0; max: 0.5; step: 0.05; initial: 0.25 }>;
 
     /**
-     * Horizontal pixel shift applied to background imagery composed from the first Level.
-     *
-     * Mirrored into the legacy `background.offsetX` shim for backward compatibility.
+     * Horizontal pixel shift applied to background imagery composed from the first Level. Also
+     * exposed on the deprecated `background.offsetX` source shim installed by
+     * {@linkcode BaseScene.shimData}.
      * @defaultValue `0`
      */
     shiftX: fields.NumberField<{ required: true; integer: true; initial: 0 }>;
 
     /**
-     * Vertical pixel shift applied to background imagery composed from the first Level.
-     *
-     * Mirrored into the legacy `background.offsetY` shim for backward compatibility.
+     * Vertical pixel shift applied to background imagery composed from the first Level. Also
+     * exposed on the deprecated `background.offsetY` source shim installed by
+     * {@linkcode BaseScene.shimData}.
      * @defaultValue `0`
      */
     shiftY: fields.NumberField<{ required: true; integer: true; initial: 0 }>;
@@ -632,10 +621,10 @@ declare namespace Scene {
     initialLevel: fields.DocumentIdField<{ readonly: false }>;
 
     /**
-     * The color of the canvas displayed behind the scene background.
+     * Color of the canvas displayed behind the scene background. Read from the first
+     * {@linkcode Level}'s `background.color` via {@linkcode BaseScene.shimData}.
      *
-     * @deprecated Since V14 the background color lives on the first Level's `background.color`.
-     * V14's source-level shim points `backgroundColor` at `levels[0].background.color`.
+     * @deprecated Background color lives on the active Level's `background.color`. (since v14, until v16)
      * @defaultValue `"#999999"`
      */
     backgroundColor: fields.ColorField<{ nullable: false; initial: "#999999" }>;
@@ -716,9 +705,8 @@ declare namespace Scene {
     /**
      * A collection of embedded MeasuredTemplate documents.
      *
-     * @deprecated Since V14 the runtime Scene schema no longer defines a `templates` embedded collection —
-     * MeasuredTemplate functionality is absorbed into {@linkcode foundry.documents.Region}. This typing
-     * remains for backward compatibility with V13-era code; new code should use Region instead.
+     * @deprecated MeasuredTemplate functionality is absorbed into {@linkcode foundry.documents.Region};
+     * use Region documents instead. (since v14, until v16)
      * @defaultValue `[]`
      */
     // eslint-disable-next-line @typescript-eslint/no-deprecated

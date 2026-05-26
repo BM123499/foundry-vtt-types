@@ -53,8 +53,8 @@ declare abstract class BaseToken extends Document<"Token", BaseToken.Schema, any
   static override LOCALIZATION_PREFIXES: string[];
 
   /**
+   * The schema field paths that count as a movement action when changed.
    * @defaultValue `["x", "y", "elevation", "width", "height", "depth", "shape", "level"]`
-   * Includes `"depth"` and `"level"` among the movement-tracked fields.
    */
   static MOVEMENT_FIELDS: Readonly<string[]>;
 

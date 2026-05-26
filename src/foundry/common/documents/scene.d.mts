@@ -59,11 +59,10 @@ declare abstract class BaseScene extends Document<"Scene", BaseScene.Schema, any
   static override LOCALIZATION_PREFIXES: string[];
 
   /**
-   * A mapping of top-level Scene properties (used by V13-era code and the deprecation shims) to
-   * their corresponding paths on the first {@linkcode Level} of the Scene.
-   *
-   * Used internally to populate backward-compatibility getters such as the
-   * `background`/`foreground`/`backgroundColor`/`foregroundElevation` accessors on Scene source data.
+   * Mapping of top-level Scene property paths to their corresponding paths on the first
+   * {@linkcode Level} of the Scene. Consumed by {@linkcode BaseScene.shimData} to populate the
+   * deprecated `background`/`foreground`/`backgroundColor`/`foregroundElevation` accessors on
+   * Scene source data.
    * @internal
    */
   static _LEVELS_PROPERTY_MAP: ReadonlyArray<readonly [string, string]>;
@@ -79,17 +78,15 @@ declare abstract class BaseScene extends Document<"Scene", BaseScene.Schema, any
 
   /**
    * @remarks
-   * Migrations (since v14):
-   * - `fog.exploration` boolean → `fog.mode` numeric ({@linkcode CONST.FOG_EXPLORATION_MODES})
-   *
-   * Migrations carried over from earlier versions:
+   * Migrations applied to source data:
+   * - `fog.exploration` boolean → `fog.mode` numeric ({@linkcode CONST.FOG_EXPLORATION_MODES}) (since v14)
    * - `flags.core.sourceId` to `_stats.compendiumSource` (since v12, no specified end)
    */
   static override migrateData(source: AnyMutableObject): AnyMutableObject;
 
   /**
    * @remarks
-   * Source-level shims added in V14 (via {@linkcode BaseScene._LEVELS_PROPERTY_MAP}):
+   * Source-level shims installed via {@linkcode BaseScene._LEVELS_PROPERTY_MAP}:
    * - `background.*` → values composed from the first {@linkcode Level}'s `background`/`textures`,
    *   plus `background.offsetX`/`offsetY` ← `shiftX`/`shiftY`.
    * - `foreground` → first Level's `foreground.src`.
@@ -99,12 +96,6 @@ declare abstract class BaseScene extends Document<"Scene", BaseScene.Schema, any
    * - `fog.exploration` → `fog.mode` (since v14, until v16).
    */
   static override shimData(source: AnyMutableObject, options?: DataModel.ShimDataOptions): AnyMutableObject;
-
-  // V14 removed the v12-until-v14 deprecated getters:
-  // `fogExploration` (→ `fog.exploration`), `fogReset` (→ `fog.reset`), `fogOverlay` (→ `fog.overlay`),
-  // `fogExploredColor` (→ `fog.colors.explored`), `fogUnexploredColor` (→ `fog.colors.unexplored`),
-  // `globalLight` (→ `environment.globalLight.enabled`), `globalLightThreshold`
-  // (→ `environment.globalLight.darkness.max`), and `darkness` (→ `environment.darknessLevel`).
 
   /*
    * After this point these are not really overridden methods.
