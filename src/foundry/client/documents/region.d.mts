@@ -1,7 +1,7 @@
 import type { MaybeArray, Merge, NullishProps } from "#utils";
-import type { fields, BaseShapeData } from "#common/data/_module.d.mts";
+import type { fields } from "#common/data/_module.d.mts";
 import type { DatabaseBackend, Document, EmbeddedCollection } from "#common/abstract/_module.d.mts";
-import type { BaseRegion } from "#common/documents/_module.d.mts";
+import type { BaseRegion, BaseToken } from "#common/documents/_module.d.mts";
 import type { Region } from "#client/canvas/placeables/_module.d.mts";
 import type { DialogV2 } from "#client/applications/api/_module.d.mts";
 
@@ -510,9 +510,10 @@ declare namespace RegionDocument {
     }>;
 
     /**
-     * The shapes that make up the Region
+     * The shapes that make up the Region.
+     * Uses {@linkcode fields.ShapesField}, which constructs the inner element automatically.
      */
-    shapes: fields.ArrayField<fields.TypedSchemaField<BaseShapeData.Types>>;
+    shapes: fields.ShapesField;
 
     /**
      * A RegionElevation object which defines the elevation levels where the Region takes effect
@@ -537,12 +538,60 @@ declare namespace RegionDocument {
         top: fields.NumberField<{
           required: true;
         }>;
+
+        /**
+         * Whether the Region's effect includes the top boundary (inclusive) or stops just below it.
+         * @defaultValue `false`
+         */
+        topInclusive: fields.BooleanField;
       },
       {
         validate: (d: unknown) => boolean;
         validationError: "elevation.top may not be less than elevation.bottom";
       }
     >;
+
+    /**
+     * The set of {@linkcode Level} ids on the parent Scene that this Region is visible / active on.
+     * An empty set means the Region applies to all Levels.
+     * @defaultValue `[]`
+     */
+    levels: fields.SceneLevelsSetField;
+
+    /**
+     * Edge-restriction configuration: what kinds of edges this Region creates and how to weight them.
+     */
+    restriction: fields.SchemaField<{
+      /** @defaultValue `false` */
+      enabled: fields.BooleanField;
+
+      /**
+       * Which kind of restriction the Region's boundary contributes.
+       * @defaultValue `"move"`
+       */
+      type: fields.StringField<{
+        required: true;
+        choices: CONST.EDGE_RESTRICTION_TYPES[];
+        initial: "move";
+      }>;
+
+      /**
+       * Priority used when multiple restrictions overlap.
+       * @defaultValue `0`
+       */
+      priority: fields.NumberField<{ required: true; nullable: false; integer: true; initial: 0; min: 0 }>;
+    }>;
+
+    /**
+     * Attachment configuration: an optional Token that this Region follows.
+     */
+    attachment: fields.SchemaField<{
+      /**
+       * The id of a Token in the parent Scene that this Region is attached to (follows on movement).
+       * @defaultValue `null`
+       */
+      token: fields.ForeignDocumentField<typeof BaseToken, { idOnly: true; nullable: true; initial: null }>;
+    }>;
 
     /**
      * A collection of embedded RegionBehavior objects
@@ -552,11 +601,14 @@ declare namespace RegionDocument {
       RegionDocument.Implementation
     >;
 
-    /** @defaultValue `CONST.REGION_VISIBILITY.LAYER` */
+    /**
+     * Region visibility on the canvas.
+     * @defaultValue `CONST.REGION_VISIBILITY.LAYER_UNLOCKED`
+     */
     visibility: fields.NumberField<
       {
         required: true;
-        initial: typeof CONST.REGION_VISIBILITY.LAYER;
+        initial: typeof CONST.REGION_VISIBILITY.LAYER_UNLOCKED;
         choices: CONST.REGION_VISIBILITY[];
       },
       CONST.REGION_VISIBILITY | null | undefined,
@@ -564,8 +616,38 @@ declare namespace RegionDocument {
       CONST.REGION_VISIBILITY | null
     >;
 
+    /**
+     * Highlight rendering mode on the RegionLayer.
+     * @defaultValue `"shapes"`
+     */
+    highlightMode: fields.StringField<{
+      required: true;
+      initial: "shapes";
+      choices: {
+        shapes: "REGION.HIGHLIGHT_MODES.shapes.label";
+        coverage: "REGION.HIGHLIGHT_MODES.coverage.label";
+      };
+    }>;
+
+    /**
+     * Whether measurement labels are displayed on the Region.
+     * @defaultValue `false`
+     */
+    displayMeasurements: fields.BooleanField;
+
+    /**
+     * Is this Region hidden from players?
+     * @defaultValue `false`
+     */
+    hidden: fields.BooleanField;
+
     /** @defaultValue `false` */
     locked: fields.BooleanField;
+
+    /**
+     * Ownership configuration mirroring the standard document ownership pattern.
+     */
+    ownership: fields.DocumentOwnershipField;
 
     /**
      * An object of optional key/value flags

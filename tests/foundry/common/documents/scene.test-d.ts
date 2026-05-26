@@ -35,7 +35,9 @@ expectTypeOf(scene.drawings).toEqualTypeOf<EmbeddedCollection<DrawingDocument.St
 expectTypeOf(scene.lights).toEqualTypeOf<EmbeddedCollection<AmbientLightDocument.Stored, Scene.Implementation>>();
 expectTypeOf(scene.notes).toEqualTypeOf<EmbeddedCollection<NoteDocument.Stored, Scene.Implementation>>();
 expectTypeOf(scene.sounds).toEqualTypeOf<EmbeddedCollection<AmbientSoundDocument.Stored, Scene.Implementation>>();
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 expectTypeOf(scene.templates).toEqualTypeOf<
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   EmbeddedCollection<MeasuredTemplateDocument.Stored, Scene.Implementation>
 >();
 expectTypeOf(scene.tokens).toEqualTypeOf<EmbeddedCollection<TokenDocument.Stored, Scene.Implementation>>();

@@ -65,8 +65,11 @@ type JournalEntryPageTitleData = JournalEntryPage.InitializedData["title"];
 
 type JournalEntryPageData = JournalEntryPage.InitializedData;
 
+type LevelData = Level.InitializedData;
+
 type MacroData = Macro.InitializedData;
 
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 type MeasuredTemplateData = MeasuredTemplateDocument.InitializedData;
 
 type NoteData = NoteDocument.InitializedData;

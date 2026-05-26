@@ -227,7 +227,9 @@ declare global {
   export import JournalEntry = foundry.documents.JournalEntry;
   export import JournalEntryCategory = foundry.documents.JournalEntryCategory;
   export import JournalEntryPage = foundry.documents.JournalEntryPage;
+  export import Level = foundry.documents.Level;
   export import Macro = foundry.documents.Macro;
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   export import MeasuredTemplateDocument = foundry.documents.MeasuredTemplateDocument;
   export import NoteDocument = foundry.documents.NoteDocument;
   export import Playlist = foundry.documents.Playlist;

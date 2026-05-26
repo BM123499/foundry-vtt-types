@@ -53,6 +53,9 @@ declare namespace RegionBehavior {
       labelPlural: "DOCUMENT.RegionBehaviors";
       coreTypes: [
         "adjustDarknessLevel",
+        "applyActiveEffect",
+        "changeLevel",
+        "defineSurface",
         "displayScrollingText",
         "executeMacro",
         "executeScript",

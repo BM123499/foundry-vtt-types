@@ -8,6 +8,7 @@ import type {
   BaseFolder,
   BaseJournalEntry,
   BaseJournalEntryPage,
+  BaseLevel,
   BaseMeasuredTemplate,
   BaseNote,
   BasePlaylist,
@@ -72,18 +73,39 @@ declare namespace Scene {
       label: "DOCUMENT.Scene";
       labelPlural: "Document.Scenes";
       preserveOnImport: ["_id", "sort", "ownership", "active"];
-      schemaVersion: "13.341";
+
+      /**
+       * The id used for the default Scene Level when one is not configured.
+       */
+      defaultLevelId: "defaultLevel0000";
+      schemaVersion: "14.354";
     }>
   > {}
 
   namespace Metadata {
     /**
-     * The embedded metadata
+     * The embedded metadata.
+     *
+     * Includes `Level: "levels"`. `MeasuredTemplate: "templates"` is retained for
+     * backward compatibility — the underlying {@linkcode foundry.documents.MeasuredTemplateDocument}
+     * class is `@deprecated since v14` (functionality absorbed into {@linkcode foundry.documents.Region}),
+     * but the registry entry survives so existing types and PlaceableObject typings continue to resolve.
      */
     interface Embedded {
       AmbientLight: "lights";
       AmbientSound: "sounds";
       Drawing: "drawings";
+
+      /**
+       * Embedded Level documents. See {@linkcode Level} and {@linkcode Scene.Schema.levels}.
+       */
+      Level: "levels";
+
+      /**
+       * @deprecated `MeasuredTemplate` was removed from {@linkcode foundry.documents.Scene}'s runtime
+       * `metadata.embedded` in V14 (MeasuredTemplate functionality moved into Region). Kept here
+       * solely for backward type-compatibility; new code should use Region instead.
+       */
       MeasuredTemplate: "templates";
       Note: "notes";
       Region: "regions";
@@ -107,6 +129,8 @@ declare namespace Scene {
     | "AmbientLight"
     | "AmbientSound"
     | "Drawing"
+    | "Level"
+    /** @deprecated since v14 — MeasuredTemplate is absorbed into Region. */
     | "MeasuredTemplate"
     | "Note"
     | "Region"
@@ -122,6 +146,8 @@ declare namespace Scene {
     | AmbientLightDocument.Stored
     | AmbientSoundDocument.Stored
     | DrawingDocument.Stored
+    | Level.Stored
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     | MeasuredTemplateDocument.Stored
     | NoteDocument.Stored
     | RegionDocument.Stored
@@ -137,6 +163,8 @@ declare namespace Scene {
     | AmbientLightDocument.ImplementationClass
     | AmbientSoundDocument.ImplementationClass
     | DrawingDocument.ImplementationClass
+    | Level.ImplementationClass
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     | MeasuredTemplateDocument.ImplementationClass
     | NoteDocument.ImplementationClass
     | RegionDocument.ImplementationClass
@@ -513,22 +541,31 @@ declare namespace Scene {
 
     /**
      * An image or video file that provides the background texture for the scene.
+     *
+     * @deprecated Since V14 background imagery lives on the first {@linkcode Level} of the Scene.
+     * V14's {@linkcode BaseScene.shimData} installs a getter on `_source` that composes a
+     * `background` object from `levels[0].background` plus `shiftX`/`shiftY`. Kept here for
+     * backward compatibility — new code should read the active Level's `background` instead.
      * @defaultValue see {@linkcode TextureData}
      */
     background: TextureData;
 
     /**
-     * An image or video file path providing foreground media for the scene
+     * An image or video file path providing foreground media for the scene.
+     *
+     * @deprecated Since V14 foreground imagery lives on the first {@linkcode Level} (`fog.src`).
+     * V14's source-level shim points `foreground` at `levels[0].foreground.src`.
      * @defaultValue `null`
      */
     foreground: fields.FilePathField<{ categories: ["IMAGE", "VIDEO"]; virtual: true }>;
 
     /**
-     * The elevation of the foreground layer where overhead tiles reside
-     * @defaultValue `null`
-     * @remarks If falsey, {@linkcode Scene.prepareBaseData | Scene#prepareBaseData} initializes this to `this.grid.distance * 4`, with the comment:
+     * The elevation of the foreground layer where overhead tiles reside.
      *
-     * "A temporary assumption until a more robust long-term solution when we implement Scene Levels."
+     * @deprecated Since V14 foreground elevation is the top of the first Level's
+     * `elevation` band. V14's source-level shim points `foregroundElevation` at
+     * `levels[0].elevation.top`.
+     * @defaultValue `null`
      */
     foregroundElevation: fields.NumberField<{ required: false; positive: true; integer: true }>;
 
@@ -558,6 +595,22 @@ declare namespace Scene {
     padding: fields.NumberField<{ required: true; nullable: false; min: 0; max: 0.5; step: 0.05; initial: 0.25 }>;
 
     /**
+     * Horizontal pixel shift applied to background imagery composed from the first Level.
+     *
+     * Mirrored into the legacy `background.offsetX` shim for backward compatibility.
+     * @defaultValue `0`
+     */
+    shiftX: fields.NumberField<{ required: true; integer: true; initial: 0 }>;
+
+    /**
+     * Vertical pixel shift applied to background imagery composed from the first Level.
+     *
+     * Mirrored into the legacy `background.offsetY` shim for backward compatibility.
+     * @defaultValue `0`
+     */
+    shiftY: fields.NumberField<{ required: true; integer: true; initial: 0 }>;
+
+    /**
      * The initial view coordinates for the scene
      */
     initial: fields.SchemaField<{
@@ -568,11 +621,21 @@ declare namespace Scene {
       y: fields.NumberField<{ integer: true; required: true }>;
 
       /** @defaultValue `0.5` */
-      scale: fields.NumberField<{ required: true; positive: true }>;
+      scale: fields.NumberField<{ required: true; positive: true; step: 0.001 }>;
     }>;
 
     /**
-     * The color of the canvas displayed behind the scene background
+     * The id of the {@linkcode Level} which is initially viewed when the Scene is opened.
+     * If unset, the Scene's {@linkcode Scene.firstLevel | firstLevel} is used instead.
+     * @defaultValue `null`
+     */
+    initialLevel: fields.DocumentIdField<{ readonly: false }>;
+
+    /**
+     * The color of the canvas displayed behind the scene background.
+     *
+     * @deprecated Since V14 the background color lives on the first Level's `background.color`.
+     * V14's source-level shim points `backgroundColor` at `levels[0].background.color`.
      * @defaultValue `"#999999"`
      */
     backgroundColor: fields.ColorField<{ nullable: false; initial: "#999999" }>;
@@ -620,6 +683,13 @@ declare namespace Scene {
     tokens: fields.EmbeddedCollectionField<typeof BaseToken, Scene.Implementation>;
 
     /**
+     * A collection of embedded Level documents representing vertically stacked playable regions
+     * of this Scene (e.g. basement / ground floor / upstairs).
+     * @defaultValue `[]`
+     */
+    levels: fields.EmbeddedCollectionField<typeof BaseLevel, Scene.Implementation>;
+
+    /**
      * A collection of embedded Token objects.
      * @defaultValue `[]`
      */
@@ -644,13 +714,18 @@ declare namespace Scene {
     regions: fields.EmbeddedCollectionField<typeof BaseRegion, Scene.Implementation>;
 
     /**
-     * A collection of embedded AmbientSound objects.
+     * A collection of embedded MeasuredTemplate documents.
+     *
+     * @deprecated Since V14 the runtime Scene schema no longer defines a `templates` embedded collection —
+     * MeasuredTemplate functionality is absorbed into {@linkcode foundry.documents.Region}. This typing
+     * remains for backward compatibility with V13-era code; new code should use Region instead.
      * @defaultValue `[]`
      */
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     templates: fields.EmbeddedCollectionField<typeof BaseMeasuredTemplate, Scene.Implementation>;
 
     /**
-     * A collection of embedded MeasuredTemplate objects.
+     * A collection of embedded Tile objects.
      * @defaultValue `[]`
      */
     tiles: fields.EmbeddedCollectionField<typeof BaseTile, Scene.Implementation>;
@@ -728,22 +803,29 @@ declare namespace Scene {
 
   interface FogSchema extends fields.DataSchema {
     /**
-     * Should fog exploration progress be tracked for this Scene?
-     * @defaultValue `true`
+     * The fog-exploration mode for this Scene: disabled, individual per-user, or shared.
+     *
+     * Replaces the legacy boolean `fog.exploration` with a tri-state choice. See
+     * {@linkcode CONST.FOG_EXPLORATION_MODES}.
+     * @defaultValue `CONST.FOG_EXPLORATION_MODES.INDIVIDUAL` (`1`)
      */
-    exploration: fields.BooleanField<{ initial: true }>;
+    mode: fields.NumberField<
+      {
+        required: true;
+        choices: CONST.FOG_EXPLORATION_MODES[];
+        initial: typeof CONST.FOG_EXPLORATION_MODES.INDIVIDUAL;
+        validationError: "must be a value in CONST.FOG_EXPLORATION_MODES";
+      },
+      CONST.FOG_EXPLORATION_MODES | null | undefined,
+      CONST.FOG_EXPLORATION_MODES,
+      CONST.FOG_EXPLORATION_MODES
+    >;
 
     /**
      * The timestamp at which fog of war was last reset for this Scene.
      * @defaultValue `undefined`
      */
     reset: fields.NumberField<{ required: false; initial: undefined }>;
-
-    /**
-     * A special overlay image or video texture which is used for fog of war
-     * @defaultValue `null`
-     */
-    overlay: fields.FilePathField<{ categories: ["IMAGE", "VIDEO"]; virtual: true }>;
 
     /**
      * Fog-exploration coloration data
@@ -1706,6 +1788,19 @@ declare namespace Scene {
    *             SCENE-SPECIFIC TYPES              *
    *************************************************/
 
+  /**
+   * Options accepted by {@linkcode Scene._getAvailableLevels | Scene#_getAvailableLevels}.
+   */
+  interface GetAvailableLevelsOptions {
+    /**
+     * A {@linkcode foundry.canvas.SceneManager | SceneManager} whose `_getAvailableLevels`
+     * override should be applied on top of the base computed set. If the manager returns a
+     * `Set<Level>` it replaces the base set; otherwise the base set is returned unchanged.
+     * @defaultValue `null`
+     */
+    manager?: foundry.canvas.SceneManager | null;
+  }
+
   interface Dimensions {
     /** The width of the canvas. */
     width: number;
@@ -1828,11 +1923,14 @@ declare class Scene extends BaseScene.Internal.ClientDocument {
   _viewPosition: Canvas.ViewPosition;
 
   /**
-   * Track whether the scene is the active view
-   * @defaultValue `this.active`
+   * The id of the currently-viewed Level on this Scene, or `null` if the Scene itself is not viewed.
+   *
+   * Stores the id of the viewed {@linkcode Level}. Use {@linkcode Scene.isView | Scene#isView} for
+   * the boolean view-state check.
+   * @defaultValue `null`
    * @internal
    */
-  protected _view: boolean;
+  protected _view: string | null;
 
   /**
    * The grid instance.
@@ -1853,9 +1951,36 @@ declare class Scene extends BaseScene.Internal.ClientDocument {
   get thumbnail(): string | null;
 
   /**
-   * A convenience accessor for whether the Scene is currently viewed
+   * A convenience accessor for whether the Scene is currently viewed.
    */
   get isView(): boolean;
+
+  /**
+   * The Levels that are available to the current User on this Scene.
+   *
+   * - GMs and scenes without token vision can access all Levels.
+   * - Players can only access Levels where they have OBSERVER permission on a Token.
+   * - A {@linkcode foundry.canvas.SceneManager | SceneManager} may further override this via its
+   *   own `_getAvailableLevels` implementation.
+   */
+  get availableLevels(): Set<Level.Implementation>;
+
+  /**
+   * Memoized backing set populated lazily by {@linkcode Scene._getAvailableLevels}.
+   *
+   * @defaultValue `null`
+   * @internal
+   */
+  protected _availableLevels: Set<Level.Implementation> | null;
+
+  /**
+   * Compute the Levels available to the current User, optionally letting a SceneManager refine
+   * the set.
+   *
+   * Intended for internal / subclass use. Public callers should prefer
+   * {@linkcode Scene.availableLevels | Scene#availableLevels}.
+   */
+  protected _getAvailableLevels(options?: Scene.GetAvailableLevelsOptions): Set<Level.Implementation>;
 
   /**
    * Pull the specified users to this Scene.

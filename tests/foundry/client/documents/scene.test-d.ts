@@ -13,12 +13,21 @@ expectTypeOf(scene).toEqualTypeOf<Scene.Implementation>();
 expectTypeOf(scene.grid).toEqualTypeOf<foundry.grid.BaseGrid>();
 expectTypeOf(scene.dimensions).toEqualTypeOf<Scene.Dimensions>();
 expectTypeOf(scene.active).toEqualTypeOf<boolean>();
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 expectTypeOf(scene.background.src).toEqualTypeOf<string | null>();
 expectTypeOf(scene.isView).toEqualTypeOf<boolean>();
 expectTypeOf(scene.journal).toEqualTypeOf<JournalEntry.Stored | null>();
 expectTypeOf(scene.playlist).toEqualTypeOf<Playlist.Stored | null>();
 expectTypeOf(scene.playlistSound).toEqualTypeOf<string | null>();
 expectTypeOf(scene.activate()).toEqualTypeOf<Promise<Scene.Implementation | undefined>>();
+
+// V14 Scene Levels — new client surface
+expectTypeOf(scene.availableLevels).toEqualTypeOf<Set<Level.Implementation>>();
+// `levels` is a Foundry EmbeddedCollection of Level documents; assert it exposes the collection API.
+expectTypeOf(scene.levels.size).toBeNumber();
+expectTypeOf(scene.shiftX).toEqualTypeOf<number | null>();
+expectTypeOf(scene.shiftY).toEqualTypeOf<number | null>();
+expectTypeOf(scene.initialLevel).toEqualTypeOf<string | null>();
 expectTypeOf(scene.view()).toEqualTypeOf<Promise<typeof scene | number>>();
 expectTypeOf(scene.clone()).toEqualTypeOf<Scene.Implementation>();
 expectTypeOf(scene.prepareBaseData()).toEqualTypeOf<void>();

@@ -18,6 +18,7 @@ declare module "#configuration" {
  * @see {@linkcode MeasuredTemplateDocument}
  * @see {@linkcode TemplateLayer}
  */
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 declare class MeasuredTemplate extends PlaceableObject<MeasuredTemplateDocument.Implementation> {
   /**
    * The geometry shape used for testing point intersection

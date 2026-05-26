@@ -1742,6 +1742,7 @@ declare namespace Document {
     | (DocumentType extends "AmbientLight" ? AmbientLightDocument.CreateData : never)
     | (DocumentType extends "AmbientSound" ? AmbientSoundDocument.CreateData : never)
     | (DocumentType extends "Drawing" ? DrawingDocument.CreateData : never)
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     | (DocumentType extends "MeasuredTemplate" ? MeasuredTemplateDocument.CreateData : never)
     | (DocumentType extends "Note" ? NoteDocument.CreateData : never)
     | (DocumentType extends "Region" ? RegionDocument.CreateData : never)
@@ -1778,6 +1779,7 @@ declare namespace Document {
     | (DocumentType extends "AmbientLight" ? AmbientLightDocument.UpdateData : never)
     | (DocumentType extends "AmbientSound" ? AmbientSoundDocument.UpdateData : never)
     | (DocumentType extends "Drawing" ? DrawingDocument.UpdateData : never)
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     | (DocumentType extends "MeasuredTemplate" ? MeasuredTemplateDocument.UpdateData : never)
     | (DocumentType extends "Note" ? NoteDocument.UpdateData : never)
     | (DocumentType extends "Region" ? RegionDocument.UpdateData : never)
@@ -1814,6 +1816,7 @@ declare namespace Document {
     | (DocumentType extends "AmbientLight" ? AmbientLightDocument.Source : never)
     | (DocumentType extends "AmbientSound" ? AmbientSoundDocument.Source : never)
     | (DocumentType extends "Drawing" ? DrawingDocument.Source : never)
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     | (DocumentType extends "MeasuredTemplate" ? MeasuredTemplateDocument.Source : never)
     | (DocumentType extends "Note" ? NoteDocument.Source : never)
     | (DocumentType extends "Region" ? RegionDocument.Source : never)
@@ -1850,6 +1853,7 @@ declare namespace Document {
     | (DocumentType extends "AmbientLight" ? AmbientLightDocument.Parent : never)
     | (DocumentType extends "AmbientSound" ? AmbientSoundDocument.Parent : never)
     | (DocumentType extends "Drawing" ? DrawingDocument.Parent : never)
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     | (DocumentType extends "MeasuredTemplate" ? MeasuredTemplateDocument.Parent : never)
     | (DocumentType extends "Note" ? NoteDocument.Parent : never)
     | (DocumentType extends "Region" ? RegionDocument.Parent : never)
@@ -1890,6 +1894,7 @@ declare namespace Document {
     | (DocumentType extends "AmbientLight" ? AmbientLightDocument.Stored : never)
     | (DocumentType extends "AmbientSound" ? AmbientSoundDocument.Stored : never)
     | (DocumentType extends "Drawing" ? DrawingDocument.Stored : never)
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     | (DocumentType extends "MeasuredTemplate" ? MeasuredTemplateDocument.Stored : never)
     | (DocumentType extends "Note" ? NoteDocument.Stored : never)
     | (DocumentType extends "Region" ? RegionDocument.Stored : never)
@@ -1926,6 +1931,7 @@ declare namespace Document {
     | (DocumentType extends "AmbientLight" ? AmbientLightDocument.Invalid : never)
     | (DocumentType extends "AmbientSound" ? AmbientSoundDocument.Invalid : never)
     | (DocumentType extends "Drawing" ? DrawingDocument.Invalid : never)
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     | (DocumentType extends "MeasuredTemplate" ? MeasuredTemplateDocument.Invalid : never)
     | (DocumentType extends "Note" ? NoteDocument.Invalid : never)
     | (DocumentType extends "Region" ? RegionDocument.Invalid : never)
@@ -3047,7 +3053,8 @@ declare namespace Document {
         | (Name extends "JournalEntry" ? JournalEntry.Database.Internal.OperationNameMap<Temporary>[Operation] : never)
         | (Name extends "Macro" ? Macro.Database.Internal.OperationNameMap<Temporary>[Operation] : never)
         | (Name extends "MeasuredTemplate"
-            ? MeasuredTemplateDocument.Database.Internal.OperationNameMap<Temporary>[Operation]
+            ? // eslint-disable-next-line @typescript-eslint/no-deprecated
+              MeasuredTemplateDocument.Database.Internal.OperationNameMap<Temporary>[Operation]
             : never)
         | (Name extends "Note" ? NoteDocument.Database.Internal.OperationNameMap<Temporary>[Operation] : never)
         | (Name extends "PlaylistSound"
@@ -3470,6 +3477,7 @@ declare namespace Document {
     JournalEntryCategory: JournalEntryCategory.DropData;
     JournalEntryPage: JournalEntryPage.DropData;
     JournalEntry: JournalEntry.DropData;
+    Level: Level.DropData;
     Macro: Macro.DropData;
     PlaylistSound: PlaylistSound.DropData;
     Playlist: Playlist.DropData;
@@ -3482,6 +3490,7 @@ declare namespace Document {
     AmbientLight: AmbientLightDocument.DropData;
     AmbientSound: AmbientSoundDocument.DropData;
     Drawing: DrawingDocument.DropData;
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     MeasuredTemplate: MeasuredTemplateDocument.DropData;
     Note: NoteDocument.DropData;
     Region: RegionDocument.DropData;
@@ -3634,6 +3643,7 @@ declare namespace Document {
     | (Name extends "JournalEntryPage" ? JournalEntryPage.TemporaryIf<Temporary> : never)
     | (Name extends "JournalEntry" ? JournalEntry.TemporaryIf<Temporary> : never)
     | (Name extends "Macro" ? Macro.TemporaryIf<Temporary> : never)
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     | (Name extends "MeasuredTemplate" ? MeasuredTemplateDocument.TemporaryIf<Temporary> : never)
     | (Name extends "Note" ? NoteDocument.TemporaryIf<Temporary> : never)
     | (Name extends "PlaylistSound" ? PlaylistSound.TemporaryIf<Temporary> : never)

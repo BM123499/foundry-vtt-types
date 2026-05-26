@@ -346,6 +346,16 @@ declare namespace TokenDocument {
     height: fields.NumberField<{ nullable: false; positive: true; initial: 1; step: 0.5 }>;
 
     /**
+     * The vertical depth of the Token in distance units. Used by the elevation-aware movement
+     * model (e.g. {@linkcode Level.clampElevation | Level#clampElevation}) and tracked as a
+     * movement field via {@linkcode BaseToken.MOVEMENT_FIELDS}.
+     *
+     * Included in {@linkcode foundry.data.PrototypeToken} as well.
+     * @defaultValue `1`
+     */
+    depth: fields.NumberField<{ required: true; nullable: false; min: 0; initial: 1 }>;
+
+    /**
      * The token's texture on the canvas.
      */
     texture: TextureData<{
@@ -694,6 +704,12 @@ declare namespace TokenDocument {
     height: fields.NumberField<{ required: true; nullable: false; positive: true; initial: undefined }>;
 
     /**
+     * The vertical depth in distance units. Mirrors {@linkcode TokenDocument.Schema.depth}.
+     * @defaultValue `undefined`
+     */
+    depth: fields.NumberField<{ required: true; nullable: false; min: 0; initial: undefined }>;
+
+    /**
      * The shape type (see {@linkcode CONST.TOKEN_SHAPES}).
      * @defaultValue `undefined`
      */
@@ -708,6 +724,12 @@ declare namespace TokenDocument {
       CONST.TOKEN_SHAPES,
       CONST.TOKEN_SHAPES
     >;
+
+    /**
+     * The id of the {@linkcode Level} the token was on at this waypoint.
+     * @defaultValue `undefined`
+     */
+    level: fields.DocumentIdField<{ required: true; nullable: false; readonly: false; initial: undefined }>;
 
     /**
      * The movement action from the previous to this waypoint.
@@ -766,10 +788,25 @@ declare namespace TokenDocument {
     }>;
 
     /**
-     * The movement cost from the previous to this waypoint (nonnegative).
+     * The ID of the subpath of the movement that contains this waypoint.
+     *
+     * Allows a single movement to be broken into subpaths (e.g. when a surface or level change
+     * splits a path).
      * @defaultValue `undefined`
      */
-    cost: fields.NumberField<{ required: true; nullable: false; min: 0; initial: undefined }>;
+    subpathId: fields.StringField<{
+      required: true;
+      blank: false;
+      initial: undefined;
+      validate: (value: string) => void;
+    }>;
+
+    /**
+     * The movement cost from the previous to this waypoint, or `null` to defer to the action's
+     * terrain-derived cost.
+     * @defaultValue `undefined`
+     */
+    cost: fields.NumberField<{ required: true; nullable: true; min: 0; initial: undefined }>;
   }
 
   interface MeasuredMovementWaypoint extends fields.SchemaField.InitializedData<MeasuredMovementWaypointSchema> {}
@@ -838,6 +875,20 @@ declare namespace TokenDocument {
      * @defaultValue `0`
      */
     elevation: fields.NumberField<{ required: true; nullable: false; initial: 0 }>;
+
+    /**
+     * The id of the {@linkcode Level} this Token is currently placed on, or the Scene's
+     * {@linkcode Scene.Metadata.defaultLevelId | defaultLevelId} when the Scene has no Levels.
+     *
+     * Part of {@linkcode BaseToken.MOVEMENT_FIELDS}, so changes to it are treated as a movement action.
+     * @defaultValue `BaseScene.metadata.defaultLevelId` (`"defaultLevel0000"`)
+     */
+    level: fields.DocumentIdField<{
+      required: true;
+      nullable: false;
+      readonly: false;
+      initial: "defaultLevel0000";
+    }>;
 
     /**
      * The z-index of this token relative to other siblings

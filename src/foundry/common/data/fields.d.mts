@@ -2774,13 +2774,223 @@ declare namespace SetField {
 }
 
 /**
- * A subclass of {@linkcode ObjectField} which embeds some other DataModel definition as an inner object.
+ * A nullable set field used to reference a set of specific Scene Level documents by their `_id`.
+ * Each element is a {@linkcode DocumentIdField} constructed with `nullable: false, readonly: false`.
+ * @template Options         - the options of the SceneLevelsSetField instance
+ * @template AssignmentType  - the type of the allowed assignment values of the SceneLevelsSetField
+ * @template InitializedType - the type of the initialized values of the SceneLevelsSetField
+ * @template PersistedType   - the type of the persisted values of the SceneLevelsSetField
+ * @remarks
+ * Defaults:
+ * - AssignmentType: `Iterable<string> | null | undefined`
+ * - InitializedType: `Set<string>`
+ * - PersistedType: `string[]`
+ * - InitialValue: `[]`
+ */
+declare class SceneLevelsSetField<
+  const Options extends SetField.AnyOptions = SceneLevelsSetField.DefaultOptions,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  const AssignmentType = SceneLevelsSetField.AssignmentType<Options>,
+  const InitializedType = SceneLevelsSetField.InitializedType<Options>,
+  const PersistedType extends string[] | null | undefined = SceneLevelsSetField.PersistedType<Options>,
+> extends SetField<
+  DocumentIdField<{ nullable: false; readonly: false }>,
+  Options,
+  string,
+  string,
+  AssignmentType,
+  InitializedType,
+  string,
+  PersistedType
+> {
+  /**
+   * @param options - Options which configure the behavior of the field
+   * @param context - Additional context which describes the field
+   */
+  constructor(options?: Options, context?: DataField.ConstructionContext);
+
+  static override get _defaults(): SetField.AnyOptions;
+}
+
+declare namespace SceneLevelsSetField {
+  /** The type of the default options for the {@linkcode SceneLevelsSetField} class. */
+  type DefaultOptions = SimpleMerge<
+    SetField.DefaultOptions,
+    {
+      required: true;
+      initial: [];
+    }
+  >;
+
+  /**
+   * A helper type for the given options type merged into the default options of the SceneLevelsSetField class.
+   * @template Opts - the options that override the default options
+   */
+  type MergedOptions<Opts extends SetField.AnyOptions> = SimpleMerge<DefaultOptions, Opts>;
+
+  /**
+   * A shorthand for the assignment type of a SceneLevelsSetField class.
+   * @template Opts - the options that override the default options
+   *
+   * @deprecated AssignmentType is being deprecated. See {@linkcode SchemaField.AssignmentData}
+   * for more details.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  type AssignmentType<Opts extends SetField.AnyOptions> = SetField.AssignmentType<string, MergedOptions<Opts>>;
+
+  /**
+   * A shorthand for the initialized type of a SceneLevelsSetField class.
+   * @template Opts - the options that override the default options
+   */
+  type InitializedType<Opts extends SetField.AnyOptions> = SetField.InitializedType<string, MergedOptions<Opts>>;
+
+  /**
+   * A shorthand for the persisted type of a SceneLevelsSetField class.
+   * @template Opts - the options that override the default options
+   */
+  type PersistedType<Opts extends SetField.AnyOptions> = SetField.PersistedType<string, MergedOptions<Opts>>;
+}
+
+/**
+ * A subclass of {@linkcode ArrayField} which stores an array of geometric shape data models, each
+ * one a {@linkcode foundry.data.BaseShapeData | BaseShapeData} subtype keyed by its `type` field.
+ *
+ * The inner element is constructed internally as
+ * `new TypedSchemaField(foundry.data.BaseShapeData.TYPES)` — callers pass only `options` and
+ * `context`, never the element field.
+ */
+declare class ShapesField<const Options extends ArrayField.AnyOptions = ArrayField.DefaultOptions> extends ArrayField<
+  TypedSchemaField<foundry.data.BaseShapeData.Types>,
+  Options
+> {
+  /**
+   * @param options - Options which configure the behavior of the field
+   * @param context - Additional context which describes the field
+   */
+  constructor(options?: Options, context?: DataField.ConstructionContext);
+}
+
+declare namespace ShapesField {
+  type DefaultOptions = ArrayField.DefaultOptions;
+}
+
+/**
+ * A {@linkcode SchemaField} for a single grid offset — a 2D `{i, j}` or 3D `{i, j, k}` integer
+ * tuple identifying a single grid space (or stacked grid space when 3D).
+ */
+declare class GridOffsetField<
+  const Options extends GridOffsetField.Options = GridOffsetField.DefaultOptions,
+> extends SchemaField<GridOffsetField.Schema<Options>, Options> {
+  /**
+   * @param options - Options which configure the behavior of the field
+   * @param context - Additional context which describes the field
+   */
+  constructor(options?: Options, context?: DataField.ConstructionContext);
+
+  static override get _defaults(): GridOffsetField.Options;
+}
+
+declare namespace GridOffsetField {
+  /** Options accepted by {@linkcode GridOffsetField}. */
+  interface Options extends DataField.Options.Any {
+    /** Whether this offset includes a third axis (`k`). Must be `2` or `3`. */
+    dimensions?: 2 | 3;
+  }
+
+  /** The type of the default options for the {@linkcode GridOffsetField} class. */
+  interface DefaultOptions extends Options {
+    dimensions: 2;
+  }
+
+  /**
+   * The schema for a grid offset given a dimensionality. When `dimensions === 3` the schema also
+   * includes a `k: NumberField` member.
+   */
+  type Schema<Opts extends Options> = Opts extends { dimensions: 3 }
+    ? {
+        i: NumberField<{ required: true; nullable: false; integer: true; initial: undefined }>;
+        j: NumberField<{ required: true; nullable: false; integer: true; initial: undefined }>;
+        k: NumberField<{ required: true; nullable: false; integer: true }>;
+      }
+    : {
+        i: NumberField<{ required: true; nullable: false; integer: true; initial: undefined }>;
+        j: NumberField<{ required: true; nullable: false; integer: true; initial: undefined }>;
+      };
+}
+
+/**
+ * A {@linkcode ArrayField} of {@linkcode GridOffsetField} entries — a list of grid offsets that
+ * collectively describe a {@linkcode foundry.data.GridShapeData | GridShapeData}.
+ */
+declare class GridOffsetsField<
+  const Options extends GridOffsetsField.Options = GridOffsetsField.DefaultOptions,
+> extends ArrayField<GridOffsetField<{ dimensions: 2 | 3 }>, Options> {
+  /**
+   * @param options - Options which configure the behavior of the field
+   * @param context - Additional context which describes the field
+   */
+  constructor(options?: Options, context?: DataField.ConstructionContext);
+
+  static override get _defaults(): GridOffsetsField.Options;
+}
+
+declare namespace GridOffsetsField {
+  /** Options accepted by {@linkcode GridOffsetsField}. */
+  interface Options extends ArrayField.AnyOptions {
+    /** Whether the contained offsets are 2D (`{i, j}`) or 3D (`{i, j, k}`). Defaults to `2`. */
+    dimensions?: 2 | 3;
+  }
+
+  /** The type of the default options for the {@linkcode GridOffsetsField} class. */
+  interface DefaultOptions extends Options {
+    dimensions: 2;
+  }
+}
+
+/**
+ * A subclass of {@linkcode SchemaField} that represents the root schema node of a {@linkcode DataModel}.
+ *
+ * `EmbeddedDataField` is the field used to embed a `DataModel` *inside* another model,
+ * while `DataModelSchemaField` is the SchemaField that represents a `DataModel`'s own root.
+ * Both carry a `model` reference and share clean / migrate / cast behavior.
+ * @template ModelType - the DataModel class whose schema this field represents.
+ */
+declare class DataModelSchemaField<
+  const ModelType extends DataModel.AnyConstructor,
+  const Options extends EmbeddedDataField.Options<ModelType> = EmbeddedDataField.DefaultOptions,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  const AssignmentType = EmbeddedDataField.AssignmentType<ModelType, Options>,
+  const InitializedType = EmbeddedDataField.InitializedType<ModelType, Options>,
+  const PersistedType extends AnyObject | null | undefined = EmbeddedDataField.PersistedType<ModelType, Options>,
+> extends SchemaField<DataModel.SchemaOfClass<ModelType>, Options, AssignmentType, InitializedType, PersistedType> {
+  /**
+   * @param model   - The class of DataModel which should be embedded in this field
+   * @param options - Options which configure the behavior of the field
+   * @param context - Additional context which describes the field
+   */
+  constructor(model: ModelType, options?: Options, context?: DataField.ConstructionContext);
+
+  /**
+   * The DataModel definition which this SchemaField represents.
+   */
+  model: ModelType;
+
+  /** @remarks If `value` has a `#toObject` method, calls it and returns that */
+  protected override _cast(value: unknown): AssignmentType;
+}
+
+/**
+ * A subclass of {@linkcode DataModelSchemaField} which embeds some other DataModel definition as an inner object.
  * @template ModelType       - the DataModel for the embedded data
  * @template Options         - the options of the EmbeddedDataField instance
  * @template AssignmentType  - the type of the allowed assignment values of the EmbeddedDataField
  * @template InitializedType - the type of the initialized values of the EmbeddedDataField
  * @template PersistedType   - the type of the persisted values of the EmbeddedDataField
- * @remarks
+ *
+ * The immediate parent class is {@linkcode DataModelSchemaField} rather than
+ * {@linkcode SchemaField} so that document root schemas and embedded data models share
+ * cleaning/migration behavior. The public surface of `EmbeddedDataField` is unchanged.
+ *
  * Defaults:
  * - AssignmentType: `SchemaField.AssignmentType<ModelType["schema"]["fields"]> | null | undefined`
  * - InitializedType: `SchemaField.InitializedType<ModelType["schema"]["fields"]>`
@@ -2794,7 +3004,7 @@ declare class EmbeddedDataField<
   const AssignmentType = EmbeddedDataField.AssignmentType<ModelType, Options>,
   const InitializedType = EmbeddedDataField.InitializedType<ModelType, Options>,
   const PersistedType extends AnyObject | null | undefined = EmbeddedDataField.PersistedType<ModelType, Options>,
-> extends SchemaField<DataModel.SchemaOfClass<ModelType>, Options, AssignmentType, InitializedType, PersistedType> {
+> extends DataModelSchemaField<ModelType, Options, AssignmentType, InitializedType, PersistedType> {
   /**
    * @param model   - The class of DataModel which should be embedded in this field
    * @param options - Options which configure the behavior of the field
@@ -5617,6 +5827,7 @@ export {
   BooleanField,
   ColorField,
   DataField,
+  DataModelSchemaField,
   DocumentAuthorField,
   DocumentFlagsField,
   DocumentIdField,
@@ -5630,6 +5841,8 @@ export {
   EmbeddedDocumentField,
   FilePathField,
   ForeignDocumentField,
+  GridOffsetField,
+  GridOffsetsField,
   HTMLField,
   HueField,
   IntegerSortField,
@@ -5639,8 +5852,10 @@ export {
   ObjectField,
   TypedObjectField,
   TypedSchemaField,
+  SceneLevelsSetField,
   SchemaField,
   SetField,
+  ShapesField,
   StringField,
   TypeDataField,
 };

@@ -25,6 +25,7 @@ interface DefaultDocumentClasses {
   JournalEntryCategory: typeof JournalEntryCategory;
   JournalEntryPage: typeof JournalEntryPage;
   JournalEntry: typeof JournalEntry;
+  Level: typeof Level;
   Macro: typeof Macro;
   PlaylistSound: typeof PlaylistSound;
   Playlist: typeof Playlist;
@@ -37,6 +38,7 @@ interface DefaultDocumentClasses {
   AmbientLight: typeof AmbientLightDocument;
   AmbientSound: typeof AmbientSoundDocument;
   Drawing: typeof DrawingDocument;
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   MeasuredTemplate: typeof MeasuredTemplateDocument;
   Region: typeof RegionDocument;
   Note: typeof NoteDocument;
@@ -62,6 +64,7 @@ interface DefaultDocumentInstance {
   JournalEntryCategory: JournalEntryCategory;
   JournalEntryPage: JournalEntryPage;
   JournalEntry: JournalEntry;
+  Level: Level;
   Macro: Macro;
   PlaylistSound: PlaylistSound;
   Playlist: Playlist;
@@ -74,6 +77,7 @@ interface DefaultDocumentInstance {
   AmbientLight: AmbientLightDocument;
   AmbientSound: AmbientSoundDocument;
   Drawing: DrawingDocument;
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   MeasuredTemplate: MeasuredTemplateDocument;
   Note: NoteDocument;
   Region: RegionDocument;
@@ -122,6 +126,7 @@ export interface ConfiguredDocumentClass {
   JournalEntryCategory: GetDocumentClass<"JournalEntryCategory">;
   JournalEntryPage: GetDocumentClass<"JournalEntryPage">;
   JournalEntry: GetDocumentClass<"JournalEntry">;
+  Level: GetDocumentClass<"Level">;
   Macro: GetDocumentClass<"Macro">;
   PlaylistSound: GetDocumentClass<"PlaylistSound">;
   Playlist: GetDocumentClass<"Playlist">;
@@ -160,6 +165,7 @@ export interface ConfiguredDocumentInstance {
   JournalEntryCategory: GetDocumentInstance<"JournalEntryCategory">;
   JournalEntryPage: GetDocumentInstance<"JournalEntryPage">;
   JournalEntry: GetDocumentInstance<"JournalEntry">;
+  Level: GetDocumentInstance<"Level">;
   Macro: GetDocumentInstance<"Macro">;
   PlaylistSound: GetDocumentInstance<"PlaylistSound">;
   Playlist: GetDocumentInstance<"Playlist">;
@@ -211,7 +217,9 @@ export interface ConfiguredMetadata {
   JournalEntryCategory: JournalEntryCategory.Metadata;
   JournalEntryPage: JournalEntryPage.Metadata;
   JournalEntry: JournalEntry.Metadata;
+  Level: Level.Metadata;
   Macro: Macro.Metadata;
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   MeasuredTemplate: MeasuredTemplateDocument.Metadata;
   Note: NoteDocument.Metadata;
   PlaylistSound: PlaylistSound.Metadata;
@@ -251,6 +259,7 @@ export interface CreateData {
   JournalEntryCategory: documents.BaseJournalEntryCategory.CreateData;
   JournalEntryPage: documents.BaseJournalEntryPage.CreateData;
   JournalEntry: documents.BaseJournalEntry.CreateData;
+  Level: documents.BaseLevel.CreateData;
   Macro: documents.BaseMacro.CreateData;
   PlaylistSound: documents.BasePlaylistSound.CreateData;
   Playlist: documents.BasePlaylist.CreateData;
@@ -263,6 +272,7 @@ export interface CreateData {
   AmbientLight: documents.BaseAmbientLight.CreateData;
   AmbientSound: documents.BaseAmbientSound.CreateData;
   Drawing: documents.BaseDrawing.CreateData;
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   MeasuredTemplate: documents.BaseMeasuredTemplate.CreateData;
   Note: documents.BaseNote.CreateData;
   Region: documents.BaseRegion.CreateData;
@@ -295,6 +305,7 @@ interface MisconfiguredItem extends ConformToDocumentConstructor<typeof Item> {}
 interface MisconfiguredJournalEntryCategory extends ConformToDocumentConstructor<typeof JournalEntryCategory> {}
 interface MisconfiguredJournalEntryPage extends ConformToDocumentConstructor<typeof JournalEntryPage> {}
 interface MisconfiguredJournalEntry extends ConformToDocumentConstructor<typeof JournalEntry> {}
+interface MisconfiguredLevel extends ConformToDocumentConstructor<typeof Level> {}
 interface MisconfiguredMacro extends ConformToDocumentConstructor<typeof Macro> {}
 interface MisconfiguredPlaylistSound extends ConformToDocumentConstructor<typeof PlaylistSound> {}
 interface MisconfiguredPlaylist extends ConformToDocumentConstructor<typeof Playlist> {}
@@ -307,6 +318,7 @@ interface MisconfiguredUser extends ConformToDocumentConstructor<typeof User> {}
 interface MisconfiguredAmbientLight extends ConformToDocumentConstructor<typeof AmbientLightDocument> {}
 interface MisconfiguredAmbientSound extends ConformToDocumentConstructor<typeof AmbientSoundDocument> {}
 interface MisconfiguredDrawing extends ConformToDocumentConstructor<typeof DrawingDocument> {}
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 interface MisconfiguredMeasuredTemplate extends ConformToDocumentConstructor<typeof MeasuredTemplateDocument> {}
 interface MisconfiguredNote extends ConformToDocumentConstructor<typeof NoteDocument> {}
 interface MisconfiguredRegion extends ConformToDocumentConstructor<typeof RegionDocument> {}
@@ -333,6 +345,7 @@ export interface ConfigurationFailure {
   JournalEntryCategory: MisconfiguredJournalEntryCategory;
   JournalEntryPage: MisconfiguredJournalEntryPage;
   JournalEntry: MisconfiguredJournalEntry;
+  Level: MisconfiguredLevel;
   Macro: MisconfiguredMacro;
   PlaylistSound: MisconfiguredPlaylistSound;
   Playlist: MisconfiguredPlaylist;

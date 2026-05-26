@@ -1,8 +1,10 @@
 import { expectTypeOf } from "vitest";
 import type { InterfaceToObject } from "fvtt-types/utils";
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 import BaseMeasuredTemplate = foundry.documents.BaseMeasuredTemplate;
 import Document = foundry.abstract.Document;
 
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 class TestBaseMeasuredTemplate extends BaseMeasuredTemplate {
   get compendium() {
     return this.inCompendium

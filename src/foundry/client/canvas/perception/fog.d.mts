@@ -58,7 +58,7 @@ declare class FogManager extends EventEmitterMixin() {
   /**
    * Does the currently viewed Scene support fog of war exploration?
    */
-  get fogExploration(): Scene.Implementation["fog"]["exploration"];
+  get fogExploration(): boolean;
 
   /**
    * Is this position explored?

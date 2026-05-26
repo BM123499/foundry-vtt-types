@@ -19,6 +19,7 @@ declare class MeasuredTemplateConfig<
   Configuration extends MeasuredTemplateConfig.Configuration = MeasuredTemplateConfig.Configuration,
   RenderOptions extends MeasuredTemplateConfig.RenderOptions = MeasuredTemplateConfig.RenderOptions,
 > extends HandlebarsApplicationMixin(DocumentSheetV2)<
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   MeasuredTemplateDocument.Implementation,
   RenderContext,
   Configuration,
@@ -32,11 +33,13 @@ declare namespace MeasuredTemplateConfig {
   interface RenderContext
     extends
       HandlebarsApplicationMixin.RenderContext,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       DocumentSheetV2.RenderContext<MeasuredTemplateDocument.Implementation> {}
 
   interface Configuration
     extends
       HandlebarsApplicationMixin.Configuration,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       DocumentSheetV2.Configuration<MeasuredTemplateDocument.Implementation> {}
 
   interface RenderOptions extends HandlebarsApplicationMixin.RenderOptions, DocumentSheetV2.RenderOptions {}

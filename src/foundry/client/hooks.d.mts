@@ -656,16 +656,18 @@ export interface AllHooks extends DynamicHooks {
 
   /**
    * A hook event that fires when a custom active effect is applied.
-   * @param actor   - The actor the active effect is being applied to
-   * @param change  - The change data being applied
-   * @param current - The current value being modified
-   * @param delta   - The parsed value of the change object
-   * @param changes - An object which accumulates changes to be applied
+   *
+   * @param targetDoc - The Document to which this effect is being applied
+   *                    (V14 widens the target from `Actor` to also include `Item` and `TokenDocument`).
+   * @param change    - The change data being applied
+   * @param current   - The current value being modified
+   * @param delta     - The parsed value of the change object
+   * @param changes   - An object which accumulates changes to be applied
    * @remarks This is called by {@linkcode Hooks.call}.
-   * @see {@linkcode ActiveEffect._applyCustom | ActiveEffect#_applyCustom}
+   * @see {@linkcode ActiveEffect._applyChangeCustom | ActiveEffect._applyChangeCustom}
    */
   applyActiveEffect: (
-    actor: Actor.Implementation,
+    targetDoc: Actor.Implementation | Item.Implementation | TokenDocument.Implementation,
     change: ActiveEffect.ChangeData,
     current: unknown,
     delta: unknown,

@@ -32,6 +32,9 @@ declare abstract class BaseRegionBehavior<
    *   labelPlural: "DOCUMENT.RegionBehaviors",
    *   coreTypes: [
    *     "adjustDarknessLevel",
+   *     "applyActiveEffect",
+   *     "changeLevel",
+   *     "defineSurface",
    *     "displayScrollingText",
    *     "executeMacro",
    *     "executeScript",

@@ -372,6 +372,19 @@ export declare const PRIMARY_DOCUMENT_TYPES: readonly [
 export type PRIMARY_DOCUMENT_TYPES = ValueOf<typeof PRIMARY_DOCUMENT_TYPES>;
 
 /**
+ * The available Fog of War exploration modes on a Scene.
+ */
+export declare const FOG_EXPLORATION_MODES: Readonly<{
+  /** The fog of war exploration is disabled. */
+  DISABLED: 0;
+  /** The fog of war exploration is enabled for this scene and each user has its own personal fog of war. */
+  INDIVIDUAL: 1;
+  /** The fog of war exploration is enabled for this scene and shared among all users. */
+  SHARED: 2;
+}>;
+export type FOG_EXPLORATION_MODES = ValueOf<typeof FOG_EXPLORATION_MODES>;
+
+/**
  * The embedded Document types.
  */
 export const EMBEDDED_DOCUMENT_TYPES: readonly [
@@ -386,6 +399,7 @@ export const EMBEDDED_DOCUMENT_TYPES: readonly [
   "Item",
   "JournalEntryCategory",
   "JournalEntryPage",
+  "Level",
   "MeasuredTemplate",
   "Note",
   "PlaylistSound",
@@ -1961,7 +1975,24 @@ export declare const GRAPHICS_FILE_EXTENSIONS: Readonly<{
 export type GRAPHICS_FILE_EXTENSIONS = keyof typeof GRAPHICS_FILE_EXTENSIONS;
 
 /**
- * @privateRemarks Video is spread in after audio, so its `ogg` and `webm` keys override
+ * The supported file extensions for texture-type files, and their corresponding mime types.
+ *
+ * Texture files combine all {@linkcode IMAGE_FILE_EXTENSIONS} and {@linkcode VIDEO_FILE_EXTENSIONS},
+ * plus the GPU-compressed texture formats `basis` and `ktx2`.
+ */
+export declare const TEXTURE_FILE_EXTENSIONS: Readonly<
+  typeof IMAGE_FILE_EXTENSIONS &
+    typeof VIDEO_FILE_EXTENSIONS & {
+      basis: "application/octet-stream";
+      ktx2: "image/ktx2";
+    }
+>;
+export type TEXTURE_FILE_EXTENSIONS = keyof typeof TEXTURE_FILE_EXTENSIONS;
+
+/**
+ * @privateRemarks Video is spread in after audio, so its `ogg` and `webm` keys override.
+ * Texture is spread after Text/Font, so its `basis`/`ktx2` keys are present and other image/video
+ * extensions are already covered by the earlier spreads.
  */
 interface _UPLOADABLE_FILE_EXTENSIONS
   extends
@@ -1970,6 +2001,7 @@ interface _UPLOADABLE_FILE_EXTENSIONS
     Identity<typeof VIDEO_FILE_EXTENSIONS>,
     Identity<typeof TEXT_FILE_EXTENSIONS>,
     Identity<typeof FONT_FILE_EXTENSIONS>,
+    Pick<typeof TEXTURE_FILE_EXTENSIONS, "basis" | "ktx2">,
     Identity<typeof GRAPHICS_FILE_EXTENSIONS> {}
 
 export declare const UPLOADABLE_FILE_EXTENSIONS: Readonly<_UPLOADABLE_FILE_EXTENSIONS>;
@@ -1985,6 +2017,7 @@ export declare const FILE_CATEGORIES: Readonly<{
   AUDIO: typeof AUDIO_FILE_EXTENSIONS;
   TEXT: typeof TEXT_FILE_EXTENSIONS;
   FONT: typeof FONT_FILE_EXTENSIONS;
+  TEXTURE: typeof TEXTURE_FILE_EXTENSIONS;
   GRAPHICS: typeof GRAPHICS_FILE_EXTENSIONS;
 
   /**
@@ -2551,8 +2584,19 @@ export declare const REGION_VISIBILITY: Readonly<{
    * Visible to anyone.
    */
   ALWAYS: 2 & REGION_VISIBILITY;
+
+  /**
+   * Visible on the RegionLayer to users with Observer permissions when it is unlocked.
+   */
+  LAYER_UNLOCKED: 4 & REGION_VISIBILITY;
 }>;
 export type REGION_VISIBILITY = Brand<number, "constants.REGION_VISIBILITY">;
+
+/**
+ * The edge restriction kinds that a Region can declare in its `restriction` schema.
+ */
+export declare const EDGE_RESTRICTION_TYPES: readonly ["light", "darkness", "sight", "sound", "move"];
+export type EDGE_RESTRICTION_TYPES = ValueOf<typeof EDGE_RESTRICTION_TYPES>;
 
 export declare const REGION_MOVEMENT_SEGMENTS: Readonly<{
   /**

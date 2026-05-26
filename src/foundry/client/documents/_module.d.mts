@@ -35,6 +35,7 @@ export { default as Combatant } from "./combatant.mjs";
 export { default as CombatantGroup } from "./combatant-group.mjs";
 export { default as JournalEntryCategory } from "./journal-entry-category.mjs";
 export { default as JournalEntryPage } from "./journal-entry-page.mjs";
+export { default as Level } from "./level.mjs";
 export { default as PlaylistSound } from "./playlist-sound.mjs";
 export { default as RegionBehavior } from "./region-behavior.mjs";
 export { default as TableResult } from "./table-result.mjs";
@@ -43,6 +44,7 @@ export { default as TableResult } from "./table-result.mjs";
 export { default as AmbientLightDocument } from "./ambient-light.mjs";
 export { default as AmbientSoundDocument } from "./ambient-sound.mjs";
 export { default as DrawingDocument } from "./drawing.mjs";
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 export { default as MeasuredTemplateDocument } from "./measured-template.mjs";
 export { default as NoteDocument } from "./note.mjs";
 export { default as RegionDocument } from "./region.mjs";

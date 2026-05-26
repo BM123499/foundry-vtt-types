@@ -118,6 +118,7 @@ declare namespace MeasuredTemplateDocument {
   /**
    * An instance of `MeasuredTemplateDocument` that comes from the database.
    */
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   type Stored = Document.Internal.Stored<MeasuredTemplateDocument.Implementation>;
 
   /**
@@ -154,8 +155,10 @@ declare namespace MeasuredTemplateDocument {
    */
   type CreateReturn<Data extends MaybeArray<CreateInput>, Temporary extends boolean | undefined> =
     Data extends Array<CreateInput>
-      ? Array<MeasuredTemplateDocument.TemporaryIf<Temporary>>
-      : MeasuredTemplateDocument.TemporaryIf<Temporary> | undefined;
+      ? // eslint-disable-next-line @typescript-eslint/no-deprecated
+        Array<MeasuredTemplateDocument.TemporaryIf<Temporary>>
+      : // eslint-disable-next-line @typescript-eslint/no-deprecated
+          MeasuredTemplateDocument.TemporaryIf<Temporary> | undefined;
 
   /**
    * The data after a {@linkcode Document} has been initialized, for example
@@ -317,6 +320,7 @@ declare namespace MeasuredTemplateDocument {
      *
      * The {@linkcode GetDocumentsOperation} and {@linkcode BackendGetOperation} interfaces derive from this one.
      */
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     interface GetOperation extends DatabaseBackend.GetOperation<MeasuredTemplateDocument.Parent> {}
 
     /**
@@ -347,7 +351,9 @@ declare namespace MeasuredTemplateDocument {
     interface CreateOperation<Temporary extends boolean | undefined = boolean | undefined>
       extends
         DatabaseBackend.CreateOperation<
+          // eslint-disable-next-line @typescript-eslint/no-deprecated
           MeasuredTemplateDocument.CreateInput,
+          // eslint-disable-next-line @typescript-eslint/no-deprecated
           MeasuredTemplateDocument.Parent,
           Temporary
         >,
@@ -490,7 +496,7 @@ declare namespace MeasuredTemplateDocument {
      */
     interface UpdateOperation
       extends
-        DatabaseBackend.UpdateOperation<MeasuredTemplateDocument.UpdateInput, MeasuredTemplateDocument.Parent>,
+        DatabaseBackend.UpdateOperation<MeasuredTemplateDocument.UpdateInput, MeasuredTemplateDocument.Parent>, // eslint-disable-line @typescript-eslint/no-deprecated
         DatabaseBackend._CommonCanvasDocumentUpdateProperties {}
 
     /**
@@ -637,6 +643,7 @@ declare namespace MeasuredTemplateDocument {
      * @remarks This interface was previously typed for passing to {@linkcode MeasuredTemplateDocument.delete | MeasuredTemplateDocument#delete}.
      * The new name for that interface is {@linkcode DeleteOneDocumentOperation}.
      */
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     interface DeleteOperation extends DatabaseBackend.DeleteOperation<MeasuredTemplateDocument.Parent> {}
 
     /**
@@ -772,43 +779,72 @@ declare namespace MeasuredTemplateDocument {
 
     namespace Internal {
       interface OperationNameMap<Temporary extends boolean | undefined = boolean | undefined> {
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         GetDocumentsOperation: MeasuredTemplateDocument.Database.GetDocumentsOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         BackendGetOperation: MeasuredTemplateDocument.Database.BackendGetOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         GetOperation: MeasuredTemplateDocument.Database.GetOperation;
 
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         CreateDocumentsOperation: MeasuredTemplateDocument.Database.CreateDocumentsOperation<Temporary>;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         CreateEmbeddedOperation: MeasuredTemplateDocument.Database.CreateEmbeddedOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         BackendCreateOperation: MeasuredTemplateDocument.Database.BackendCreateOperation<Temporary>;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         CreateOperation: MeasuredTemplateDocument.Database.CreateOperation<Temporary>;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         PreCreateOptions: MeasuredTemplateDocument.Database.PreCreateOptions<Temporary>;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         PreCreateOperation: MeasuredTemplateDocument.Database.PreCreateOperation<Temporary>;
         // eslint-disable-next-line @typescript-eslint/no-deprecated
         OnCreateDocumentsOperation: MeasuredTemplateDocument.Database.OnCreateDocumentsOperation<Temporary>;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         OnCreateOptions: MeasuredTemplateDocument.Database.OnCreateOptions;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         OnCreateOperation: MeasuredTemplateDocument.Database.OnCreateOperation;
 
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         UpdateOneDocumentOperation: MeasuredTemplateDocument.Database.UpdateOneDocumentOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         UpdateEmbeddedOperation: MeasuredTemplateDocument.Database.UpdateEmbeddedOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         UpdateManyDocumentsOperation: MeasuredTemplateDocument.Database.UpdateManyDocumentsOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         BackendUpdateOperation: MeasuredTemplateDocument.Database.BackendUpdateOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         UpdateOperation: MeasuredTemplateDocument.Database.UpdateOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         PreUpdateOptions: MeasuredTemplateDocument.Database.PreUpdateOptions;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         PreUpdateOperation: MeasuredTemplateDocument.Database.PreUpdateOperation;
         // eslint-disable-next-line @typescript-eslint/no-deprecated
         OnUpdateDocumentsOperation: MeasuredTemplateDocument.Database.OnUpdateDocumentsOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         OnUpdateOptions: MeasuredTemplateDocument.Database.OnUpdateOptions;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         OnUpdateOperation: MeasuredTemplateDocument.Database.OnUpdateOperation;
 
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         DeleteOneDocumentOperation: MeasuredTemplateDocument.Database.DeleteOneDocumentOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         DeleteEmbeddedOperation: MeasuredTemplateDocument.Database.DeleteEmbeddedOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         DeleteManyDocumentsOperation: MeasuredTemplateDocument.Database.DeleteManyDocumentsOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         BackendDeleteOperation: MeasuredTemplateDocument.Database.BackendDeleteOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         DeleteOperation: MeasuredTemplateDocument.Database.DeleteOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         PreDeleteOptions: MeasuredTemplateDocument.Database.PreDeleteOptions;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         PreDeleteOperation: MeasuredTemplateDocument.Database.PreDeleteOperation;
         // eslint-disable-next-line @typescript-eslint/no-deprecated
         OnDeleteDocumentsOperation: MeasuredTemplateDocument.Database.OnDeleteDocumentsOperation;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         OnDeleteOptions: MeasuredTemplateDocument.Database.OnDeleteOptions;
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         OnDeleteOperation: MeasuredTemplateDocument.Database.OnDeleteOperation;
       }
     }
@@ -897,6 +933,7 @@ declare namespace MeasuredTemplateDocument {
    * If `Temporary` is true then {@linkcode MeasuredTemplateDocument.Implementation}, otherwise {@linkcode MeasuredTemplateDocument.Stored}.
    */
   type TemporaryIf<Temporary extends boolean | undefined> =
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     true extends Extract<Temporary, true> ? MeasuredTemplateDocument.Implementation : MeasuredTemplateDocument.Stored;
 
   /**
@@ -967,7 +1004,9 @@ declare namespace MeasuredTemplateDocument {
   // TODO: inline .Stored in v14 instead of taking Temporary
   type CreateDialogReturn<
     Temporary extends boolean | undefined,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     Config extends MeasuredTemplateDocument.CreateDialogOptions | undefined,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
   > = Document.CreateDialogReturn<MeasuredTemplateDocument.TemporaryIf<Temporary>, Config>;
 
   /**
@@ -975,6 +1014,7 @@ declare namespace MeasuredTemplateDocument {
    * @see {@linkcode Document.DeleteDialogReturn}
    */
   type DeleteDialogReturn<Config extends DialogV2.ConfirmConfig | undefined> = Document.DeleteDialogReturn<
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     MeasuredTemplateDocument.Stored,
     Config
   >;
@@ -992,14 +1032,21 @@ declare namespace MeasuredTemplateDocument {
 /**
  * The client-side MeasuredTemplate document which extends the common BaseMeasuredTemplate document model.
  *
- * @see {@linkcode Scene}                     The Scene document type which contains MeasuredTemplate documents
+ * @deprecated Since V14, MeasuredTemplate functionality is absorbed into {@linkcode foundry.documents.RegionDocument}
+ * workflows. Scene no longer exposes a `templates` embedded collection and `"MeasuredTemplate"` is no longer in
+ * {@linkcode CONST.EMBEDDED_DOCUMENT_TYPES}. This class is retained for backward compatibility and scheduled for
+ * removal in v16. Use {@linkcode foundry.documents.RegionDocument} with appropriate Region behaviors instead.
+ *
+ * @see {@linkcode Scene}                     The Scene document type which formerly contained MeasuredTemplate documents
  * @see {@linkcode MeasuredTemplateConfig}    The MeasuredTemplate configuration application
  */
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 declare class MeasuredTemplateDocument extends BaseMeasuredTemplate.Internal.CanvasDocument {
   /**
    * @param data    - Initial data from which to construct the `MeasuredTemplateDocument`
    * @param context - Construction context options
    */
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   constructor(data?: MeasuredTemplateDocument.CreateData, context?: MeasuredTemplateDocument.ConstructionContext);
 
   /**
@@ -1027,17 +1074,22 @@ declare class MeasuredTemplateDocument extends BaseMeasuredTemplate.Internal.Can
   // Descendant Document operations have been left out because MeasuredTemplate does not have any descendant documents.
 
   // `context` must contain a `parent`, so is required.
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   static override defaultName(context: MeasuredTemplateDocument.DefaultNameContext): string;
 
   // `createOptions` must contain a  `parent`, so is required.
   static override createDialog<
     Temporary extends boolean | undefined = undefined,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     Options extends MeasuredTemplateDocument.CreateDialogOptions | undefined = undefined,
   >(
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     data: MeasuredTemplateDocument.CreateDialogData | undefined,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     createOptions: MeasuredTemplateDocument.Database.CreateDocumentsOperation<Temporary>,
     options?: Options,
-  ): Promise<MeasuredTemplateDocument.CreateDialogReturn<Temporary, Options>>;
+  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
+  : Promise<MeasuredTemplateDocument.CreateDialogReturn<Temporary, Options>>;
 
   /**
    * @deprecated "The `ClientDocument.createDialog` signature has changed. It now accepts database operation options in its second
@@ -1047,18 +1099,23 @@ declare class MeasuredTemplateDocument extends BaseMeasuredTemplate.Internal.Can
    */
   static override createDialog<
     Temporary extends boolean | undefined = undefined,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     Options extends MeasuredTemplateDocument.CreateDialogOptions | undefined = undefined,
   >(
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     data: MeasuredTemplateDocument.CreateDialogData | undefined,
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     createOptions: MeasuredTemplateDocument.CreateDialogDeprecatedOptions<Temporary>,
     options?: Options,
-  ): Promise<MeasuredTemplateDocument.CreateDialogReturn<Temporary, Options>>;
+  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
+  : Promise<MeasuredTemplateDocument.CreateDialogReturn<Temporary, Options>>;
 
   override deleteDialog<Options extends DialogV2.ConfirmConfig | undefined = undefined>(
     options?: Options,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     operation?: MeasuredTemplateDocument.Database.DeleteOneDocumentOperation,
-  ): Promise<MeasuredTemplateDocument.DeleteDialogReturn<Options>>;
+  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
+  : Promise<MeasuredTemplateDocument.DeleteDialogReturn<Options>>;
 
   /**
    * @deprecated "`options` is now an object containing entries supported by {@linkcode DialogV2.confirm | DialogV2.confirm}."
@@ -1069,19 +1126,27 @@ declare class MeasuredTemplateDocument extends BaseMeasuredTemplate.Internal.Can
   // eslint-disable-next-line @typescript-eslint/no-deprecated
   override deleteDialog<Options extends Document.DeleteDialogDeprecatedConfig | undefined = undefined>(
     options?: Options,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     operation?: MeasuredTemplateDocument.Database.DeleteOneDocumentOperation,
-  ): Promise<MeasuredTemplateDocument.DeleteDialogReturn<Options>>;
+  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
+  : Promise<MeasuredTemplateDocument.DeleteDialogReturn<Options>>;
 
   static override fromDropData(
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     data: MeasuredTemplateDocument.DropData,
-  ): Promise<MeasuredTemplateDocument.Implementation | undefined>;
+  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
+  : Promise<MeasuredTemplateDocument.Implementation | undefined>;
 
   static override fromImport(
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     source: MeasuredTemplateDocument.Source,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     context?: Document.FromImportContext<MeasuredTemplateDocument.Parent>,
-  ): Promise<MeasuredTemplateDocument.Implementation>;
+  ) // eslint-disable-next-line @typescript-eslint/no-deprecated
+  : Promise<MeasuredTemplateDocument.Implementation>;
 
   override _onClickDocumentLink(event: MouseEvent): ClientDocument.OnClickDocumentLinkReturn;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 export default MeasuredTemplateDocument;

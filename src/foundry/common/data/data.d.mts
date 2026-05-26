@@ -275,7 +275,13 @@ declare namespace BaseShapeData {
     rectangle: typeof RectangleShapeData;
     circle: typeof CircleShapeData;
     ellipse: typeof EllipseShapeData;
+    emanation: typeof EmanationShapeData;
+    cone: typeof ConeShapeData;
+    ring: typeof RingShapeData;
+    line: typeof LineShapeData;
     polygon: typeof PolygonShapeData;
+    token: typeof TokenShapeData;
+    grid: typeof GridShapeData;
   }
 }
 
@@ -438,6 +444,284 @@ declare class PolygonShapeData extends BaseShapeData<PolygonShapeData.Schema> {
   static override TYPE: "polygon";
 
   static override defineSchema(): PolygonShapeData.Schema;
+}
+
+declare namespace EmanationShapeData {
+  interface Schema extends BaseShapeData.Schema<"emanation"> {
+    /**
+     * The base shape over which the emanation is computed. Any of the other shape types except
+     * `emanation` and `ring` are accepted (those are filtered out at runtime).
+     * @defaultValue `undefined`
+     */
+    base: fields.TypedSchemaField<Omit<BaseShapeData.Types, "emanation" | "ring">>;
+
+    /**
+     * The emanation radius in pixels (or grid units when `gridBased` is `true`).
+     * @defaultValue `undefined`
+     */
+    radius: fields.NumberField<{ required: true; nullable: false; min: 0; initial: undefined }>;
+
+    /**
+     * If the shape is grid-based, its dimensions are converted into grid units by dividing each by
+     * the grid size and multiplying by the grid distance.
+     * @defaultValue `false`
+     */
+    gridBased: fields.BooleanField;
+  }
+}
+
+/**
+ * The data model for an emanation shape: a base shape inflated outward by a radius.
+ */
+declare class EmanationShapeData extends BaseShapeData<EmanationShapeData.Schema> {
+  static override TYPE: "emanation";
+
+  static override defineSchema(): EmanationShapeData.Schema;
+}
+
+declare namespace ConeShapeData {
+  type Curvature = "round" | "flat" | "semicircle";
+
+  interface Schema extends BaseShapeData.Schema<"cone"> {
+    /**
+     * The x-coordinate of the center point in pixels.
+     * @defaultValue `undefined`
+     */
+    x: fields.NumberField<{ required: true; nullable: false; initial: undefined }>;
+
+    /**
+     * The y-coordinate of the center point in pixels.
+     * @defaultValue `undefined`
+     */
+    y: fields.NumberField<{ required: true; nullable: false; initial: undefined }>;
+
+    /**
+     * The radius of the cone in pixels.
+     * @defaultValue `undefined`
+     */
+    radius: fields.NumberField<{ required: true; nullable: false; initial: undefined; min: 0 }>;
+
+    /**
+     * The angle of the cone in degrees. The runtime enforces `<= 90` for `curvature: "flat"` and
+     * `<= 180` for `curvature: "semicircle"` via `validateJoint`.
+     * @defaultValue `undefined`
+     */
+    angle: fields.AngleField<{ initial: undefined; min: 0; normalize: false }>;
+
+    /**
+     * The direction the cone points, in degrees.
+     * @defaultValue `0`
+     */
+    rotation: fields.AngleField;
+
+    /**
+     * Choice of cone end-cap geometry: `"round"`, `"flat"`, or `"semicircle"`.
+     * @defaultValue `"round"`
+     */
+    curvature: fields.StringField<{
+      required: true;
+      initial: "round";
+      choices: {
+        round: "SHAPE.TYPES.cone.CURVATURES.round.label";
+        flat: "SHAPE.TYPES.cone.CURVATURES.flat.label";
+        semicircle: "SHAPE.TYPES.cone.CURVATURES.semicircle.label";
+      };
+    }>;
+
+    /**
+     * If the shape is grid-based, its dimensions are converted into grid units.
+     * @defaultValue `false`
+     */
+    gridBased: fields.BooleanField;
+  }
+}
+
+/**
+ * The data model for a cone shape.
+ */
+declare class ConeShapeData extends BaseShapeData<ConeShapeData.Schema> {
+  static override TYPE: "cone";
+
+  static override defineSchema(): ConeShapeData.Schema;
+}
+
+declare namespace RingShapeData {
+  interface Schema extends BaseShapeData.Schema<"ring"> {
+    /**
+     * The x-coordinate of the origin in pixels.
+     * @defaultValue `undefined`
+     */
+    x: fields.NumberField<{ required: true; nullable: false; initial: undefined }>;
+
+    /**
+     * The y-coordinate of the origin in pixels.
+     * @defaultValue `undefined`
+     */
+    y: fields.NumberField<{ required: true; nullable: false; initial: undefined }>;
+
+    /**
+     * The radius of the ring (to its centerline) in pixels.
+     * @defaultValue `undefined`
+     */
+    radius: fields.NumberField<{ required: true; nullable: false; initial: undefined; min: 0 }>;
+
+    /**
+     * The inner width of the ring in pixels (distance from centerline to inner edge).
+     * @defaultValue `undefined`
+     */
+    innerWidth: fields.NumberField<{ required: true; nullable: false; initial: undefined; min: 0 }>;
+
+    /**
+     * The outer width of the ring in pixels (distance from centerline to outer edge).
+     * @defaultValue `undefined`
+     */
+    outerWidth: fields.NumberField<{ required: true; nullable: false; initial: undefined; min: 0 }>;
+
+    /**
+     * If the shape is grid-based, its dimensions are converted into grid units.
+     * @defaultValue `false`
+     */
+    gridBased: fields.BooleanField;
+  }
+}
+
+/**
+ * The data model for a ring shape.
+ */
+declare class RingShapeData extends BaseShapeData<RingShapeData.Schema> {
+  static override TYPE: "ring";
+
+  static override defineSchema(): RingShapeData.Schema;
+}
+
+declare namespace LineShapeData {
+  interface Schema extends BaseShapeData.Schema<"line"> {
+    /**
+     * The x-coordinate of the origin in pixels.
+     * @defaultValue `undefined`
+     */
+    x: fields.NumberField<{ required: true; nullable: false; initial: undefined }>;
+
+    /**
+     * The y-coordinate of the origin in pixels.
+     * @defaultValue `undefined`
+     */
+    y: fields.NumberField<{ required: true; nullable: false; initial: undefined }>;
+
+    /**
+     * The length of the line in pixels.
+     * @defaultValue `undefined`
+     */
+    length: fields.NumberField<{ required: true; nullable: false; initial: undefined; min: 0 }>;
+
+    /**
+     * The width of the line (its thickness) in pixels.
+     * @defaultValue `undefined`
+     */
+    width: fields.NumberField<{ required: true; nullable: false; initial: undefined; min: 0 }>;
+
+    /**
+     * The rotation around the origin of the line in degrees.
+     * @defaultValue `0`
+     */
+    rotation: fields.AngleField;
+
+    /**
+     * If the shape is grid-based, its dimensions are converted into grid units.
+     * @defaultValue `false`
+     */
+    gridBased: fields.BooleanField;
+  }
+}
+
+/**
+ * The data model for a line shape.
+ */
+declare class LineShapeData extends BaseShapeData<LineShapeData.Schema> {
+  static override TYPE: "line";
+
+  static override defineSchema(): LineShapeData.Schema;
+}
+
+declare namespace TokenShapeData {
+  interface Schema extends BaseShapeData.Schema<"token"> {
+    /**
+     * The top-left x-coordinate in pixels (integer).
+     * @defaultValue `undefined`
+     */
+    x: fields.NumberField<{ required: true; nullable: false; integer: true; initial: undefined }>;
+
+    /**
+     * The top-left y-coordinate in pixels (integer).
+     * @defaultValue `undefined`
+     */
+    y: fields.NumberField<{ required: true; nullable: false; integer: true; initial: undefined }>;
+
+    /**
+     * The width in grid spaces (positive).
+     * @defaultValue `undefined`
+     */
+    width: fields.NumberField<{ required: true; nullable: false; positive: true; initial: undefined }>;
+
+    /**
+     * The height in grid spaces (positive).
+     * @defaultValue `undefined`
+     */
+    height: fields.NumberField<{ required: true; nullable: false; positive: true; initial: undefined }>;
+
+    /**
+     * The Token shape type (see {@linkcode CONST.TOKEN_SHAPES}).
+     * @defaultValue `undefined`
+     */
+    shape: fields.NumberField<
+      { required: true; choices: Record<CONST.TOKEN_SHAPES, string>; initial: undefined },
+      CONST.TOKEN_SHAPES | null | undefined,
+      CONST.TOKEN_SHAPES,
+      CONST.TOKEN_SHAPES
+    >;
+  }
+}
+
+/**
+ * The data model for a token-anchored shape — represents the area covered by a Token's footprint.
+ */
+declare class TokenShapeData extends BaseShapeData<TokenShapeData.Schema> {
+  static override TYPE: "token";
+
+  static override defineSchema(): TokenShapeData.Schema;
+}
+
+declare namespace GridShapeData {
+  interface Schema extends BaseShapeData.Schema<"grid"> {
+    /**
+     * The grid offsets covered by this shape.
+     * @defaultValue `[]`
+     */
+    offsets: fields.GridOffsetsField;
+
+    /**
+     * The optional grid-space origin. If `null`, defaults to the center of the first grid space
+     * in {@linkcode offsets}.
+     * @defaultValue `null`
+     */
+    origin: fields.SchemaField<
+      {
+        x: fields.NumberField<{ required: true; nullable: false; initial: undefined }>;
+        y: fields.NumberField<{ required: true; nullable: false; initial: undefined }>;
+      },
+      { nullable: true }
+    >;
+  }
+}
+
+/**
+ * The data model for a shape that is the union of grid spaces.
+ * Uses {@linkcode foundry.data.fields.GridOffsetsField | GridOffsetsField} to represent the covered offsets.
+ */
+declare class GridShapeData extends BaseShapeData<GridShapeData.Schema> {
+  static override TYPE: "grid";
+
+  static override defineSchema(): GridShapeData.Schema;
 }
 
 declare namespace TextureData {
@@ -803,7 +1087,13 @@ export {
   RectangleShapeData,
   CircleShapeData,
   EllipseShapeData,
+  EmanationShapeData,
+  ConeShapeData,
+  RingShapeData,
+  LineShapeData,
   PolygonShapeData,
+  TokenShapeData,
+  GridShapeData,
   TextureData,
   TombstoneData,
 };
