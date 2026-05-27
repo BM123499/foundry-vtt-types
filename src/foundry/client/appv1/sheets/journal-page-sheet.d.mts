@@ -1,5 +1,3 @@
-import type { Editor } from "tinymce";
-import type { EditorView } from "prosemirror-view";
 import type { GetDataReturnType, Identity, MaybePromise } from "#utils";
 import type Showdown from "showdown";
 import type { Application, DocumentSheet, FormApplication } from "../api/_module.d.mts";
@@ -9,7 +7,6 @@ declare module "#configuration" {
   namespace Hooks {
     interface ApplicationConfig {
       JournalPageSheet: JournalPageSheet.Any;
-      JournalTextTinyMCESheet: JournalTextTinyMCESheet.Any;
     }
   }
 }
@@ -59,7 +56,7 @@ declare class JournalPageSheet<
     name: string,
     options?: TextEditor.Options,
     initialContent?: string,
-  ): Promise<Editor | EditorView>;
+  ): Promise<TextEditor.EditorInstance>;
 
   /**
    * Update the parent sheet if it is open when the server autosaves the contents of this editor.
@@ -150,40 +147,8 @@ declare namespace JournalTextPageSheet {
   }
 }
 
-/**
- * A subclass of {@linkcode JournalTextPageSheet} that implements a TinyMCE editor.
- */
-declare class JournalTextTinyMCESheet extends JournalTextPageSheet {
-  override getData(
-    options?: Partial<JournalPageSheet.Options>,
-  ): Promise<GetDataReturnType<JournalTextTinyMCESheet.Data>>;
-
-  override close(options?: FormApplication.CloseOptions): Promise<void>;
-
-  protected override _render(
-    force?: boolean,
-    options?: Application.RenderOptions<JournalPageSheet.Options>,
-  ): Promise<void>;
-}
-
-declare namespace JournalTextTinyMCESheet {
-  interface Any extends AnyJournalTextTinyMCESheet {}
-  interface AnyConstructor extends Identity<typeof AnyJournalTextTinyMCESheet> {}
-
-  interface Data extends JournalTextPageSheet.TextData {}
-
-  /**
-   * @deprecated Replaced with {@linkcode JournalTextTinyMCESheet.Data}.
-   */
-  type MCEData = Data;
-}
-
 declare abstract class AnyJournalPageSheet extends JournalPageSheet<JournalPageSheet.Options> {
   constructor(...args: never);
 }
 
-declare abstract class AnyJournalTextTinyMCESheet extends JournalTextTinyMCESheet {
-  constructor(...args: never);
-}
-
-export { JournalPageSheet, JournalTextPageSheet, JournalTextTinyMCESheet };
+export { JournalPageSheet, JournalTextPageSheet };

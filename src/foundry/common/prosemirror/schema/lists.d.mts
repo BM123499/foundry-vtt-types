@@ -31,5 +31,3 @@ export declare const ul: NodeSpec;
  * that when the contents are serialized again, they can be removed. This is left as a TODO for now.
  */
 export declare const li: NodeSpec;
-
-export declare const liText: NodeSpec;

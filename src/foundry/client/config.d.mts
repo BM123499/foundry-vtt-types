@@ -216,6 +216,35 @@ declare global {
       config: foundry.applications.ux.TextEditor.DocumentHTMLEmbedConfig,
       options?: foundry.applications.ux.TextEditor.EnrichmentOptions,
     ) => Promise<HTMLElement | HTMLCollection | null>;
+
+    interface TextEditorEngineRenderOptions extends Record<string, unknown> {
+      editable?: boolean | undefined;
+      button?: boolean | undefined;
+      collaborate?: boolean | undefined;
+      height?: number | undefined;
+      value?: string | undefined;
+      name?: string | undefined;
+    }
+
+    type TextEditorEngineFactory = (
+      options: Record<string, unknown>,
+      initialContent: string,
+    ) => Promise<foundry.applications.ux.TextEditor.CustomEngine>;
+
+    type TextEditorEngineRenderer = (options: TextEditorEngineRenderOptions) => HTMLElement;
+
+    interface TextEditorEngineConfig {
+      create: TextEditorEngineFactory;
+      render: TextEditorEngineRenderer;
+    }
+
+    interface ProseMirrorInsert {
+      action: string;
+      title: string;
+      inline?: boolean | undefined;
+      html?: string | undefined;
+      children?: ProseMirrorInsert[] | undefined;
+    }
   }
 
   /**
@@ -2251,19 +2280,24 @@ declare global {
     };
 
     /**
-     * Default configuration options for TinyMCE editors
-     */
-    TinyMCE: tinyMCE.RawEditorOptions;
-
-    /**
      * Rich text editing configuration.
      */
     TextEditor: {
+      /**
+       * Configuration for custom text editor engines.
+       */
+      engines: Record<string, CONFIG.TextEditorEngineConfig>;
+
       /**
        * A collection of custom enrichers that can be applied to text content, allowing for the matching and handling of
        * custom patterns.
        */
       enrichers: foundry.applications.ux.TextEditor.EnricherConfig[];
+
+      /**
+       * A collection of custom ProseMirror inserts.
+       */
+      inserts: CONFIG.ProseMirrorInsert[];
     };
 
     /**

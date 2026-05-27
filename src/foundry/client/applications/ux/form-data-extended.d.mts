@@ -8,7 +8,7 @@ import type { AnyMutableObject } from "#utils";
  *
  * It also adds support for certain Foundry VTT specific concepts including:
  *  Support for defined data types and type conversion
- *  Support for TinyMCE editors
+ *  Support for ProseMirror editors
  *  Support for editable HTML elements
  */
 declare class FormDataExtended extends FormData {
@@ -24,10 +24,7 @@ declare class FormDataExtended extends FormData {
    */
   dtypes: Record<string, string>;
 
-  /**
-   * A record of TinyMCE editors which are linked to this form.
-   * @defaultValue `{}`
-   */
+  /** A record of editors which are linked to this form. @defaultValue `{}` */
   editors: Record<string, foundry.appv1.api.FormApplication.FormApplicationEditor>;
 
   /**
@@ -60,10 +57,7 @@ declare class FormDataExtended extends FormData {
 
 declare namespace FormDataExtended {
   interface Options {
-    /**
-     * A record of TinyMCE editor metadata objects, indexed by their update key
-     * (default: `{}`)
-     */
+    /** A record of editor metadata objects, indexed by their update key (default: `{}`) */
     editors?: FormDataExtended["editors"] | undefined;
 
     /**
