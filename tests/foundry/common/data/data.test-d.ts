@@ -1,6 +1,14 @@
 import { expectTypeOf, test } from "vitest";
 import DataModel = foundry.abstract.DataModel;
 import type { ValueOf } from "fvtt-types/utils";
+import {
+  ConeShapeData,
+  EmanationShapeData,
+  GridShapeData,
+  LineShapeData,
+  RingShapeData,
+  TokenShapeData,
+} from "#common/data/data.mjs";
 
 const myLight = new foundry.data.LightData();
 
@@ -33,6 +41,13 @@ expectTypeOf(myShape.width).toEqualTypeOf<number | null>();
 expectTypeOf(myShape.height).toEqualTypeOf<number | null>();
 expectTypeOf(myShape.radius).toEqualTypeOf<number | null>();
 expectTypeOf(myShape.points).toEqualTypeOf<number[]>();
+
+expectTypeOf(ConeShapeData.defineSchema()).toEqualTypeOf<ConeShapeData.Schema>();
+expectTypeOf(RingShapeData.defineSchema()).toEqualTypeOf<RingShapeData.Schema>();
+expectTypeOf(LineShapeData.defineSchema()).toEqualTypeOf<LineShapeData.Schema>();
+expectTypeOf(EmanationShapeData.defineSchema()).toEqualTypeOf<EmanationShapeData.Schema>();
+expectTypeOf(TokenShapeData.defineSchema()).toEqualTypeOf<TokenShapeData.Schema>();
+expectTypeOf(GridShapeData.defineSchema()).toEqualTypeOf<GridShapeData.Schema>();
 
 /******************************************************************/
 

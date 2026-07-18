@@ -5,6 +5,9 @@ import fields = foundry.data.fields;
 
 type DataSchema = fields.DataSchema;
 
+expectTypeOf(new fields.GridOffsetField()).toEqualTypeOf<fields.GridOffsetField>();
+expectTypeOf(new fields.GridOffsetsField()).toEqualTypeOf<fields.GridOffsetsField>();
+
 // #2554 Null and undefined for SchemaField and EmbeddedDataField
 
 await foundry.documents.BaseAmbientSound.create({

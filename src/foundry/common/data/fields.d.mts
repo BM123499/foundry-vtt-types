@@ -5688,6 +5688,65 @@ declare namespace SceneLevelsSetField {
   >;
 }
 
+declare class GridOffsetField<
+  const Options extends GridOffsetField.Options = GridOffsetField.DefaultOptions,
+> extends SchemaField<GridOffsetField.Schema, Options> {
+  constructor(options?: Options, context?: DataField.ConstructionContext);
+
+  static override get _defaults(): GridOffsetField.DefaultOptions;
+}
+
+declare namespace GridOffsetField {
+  type Options = SchemaField.Options<Schema> & {
+    /**
+     * The number of grid offset dimensions.
+     * @defaultValue `2`
+     */
+    dimensions?: 2 | 3;
+  };
+
+  type DefaultOptions = SimpleMerge<SchemaField.DefaultOptions, { dimensions: 2 }>;
+
+  interface Schema extends DataSchema {
+    i: NumberField<{ required: true; nullable: false; integer: true; initial: undefined }>;
+    j: NumberField<{ required: true; nullable: false; integer: true; initial: undefined }>;
+    k: NumberField<{ required: true; nullable: false; integer: true; initial: undefined }>;
+  }
+}
+
+declare class GridOffsetsField<
+  const Options extends GridOffsetsField.Options = GridOffsetsField.DefaultOptions,
+> extends ArrayField<
+  GridOffsetsField.Element,
+  Options,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ArrayField.AssignmentElementType<GridOffsetsField.Element>,
+  ArrayField.InitializedElementType<GridOffsetsField.Element>,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  ArrayField.AssignmentType<ArrayField.AssignmentElementType<GridOffsetsField.Element>, Options>,
+  ArrayField.InitializedType<ArrayField.InitializedElementType<GridOffsetsField.Element>, Options>,
+  ArrayField.PersistedElementType<GridOffsetsField.Element>,
+  ArrayField.PersistedType<ArrayField.PersistedElementType<GridOffsetsField.Element>, Options>
+> {
+  constructor(options?: Options, context?: DataField.ConstructionContext);
+
+  static override get _defaults(): GridOffsetsField.DefaultOptions;
+}
+
+declare namespace GridOffsetsField {
+  type Options = ArrayField.Options<SchemaField.CreateData<GridOffsetField.Schema>> & {
+    /**
+     * The number of grid offset dimensions.
+     * @defaultValue `2`
+     */
+    dimensions?: 2 | 3;
+  };
+
+  type DefaultOptions = SimpleMerge<ArrayField.DefaultOptions, { dimensions: 2 }>;
+
+  type Element = GridOffsetField;
+}
+
 export {
   AlphaField,
   AngleField,
@@ -5709,6 +5768,8 @@ export {
   EmbeddedDocumentField,
   FilePathField,
   ForeignDocumentField,
+  GridOffsetField,
+  GridOffsetsField,
   HTMLField,
   HueField,
   IntegerSortField,

@@ -4,7 +4,10 @@
 
 export * as types from "./_types.mjs";
 
+export * as drawings from "./drawings/_module.mjs";
+export * as lights from "./lights/_module.mjs";
 export * as regions from "./regions/_module.mjs";
+export * as sounds from "./sounds/_module.mjs";
 export * as tokens from "./tokens/_module.mjs";
 
 export { default as PlaceableObject } from "./placeable-object.mjs";

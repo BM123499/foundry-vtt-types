@@ -97,15 +97,7 @@ expectTypeOf(myRegion).toEqualTypeOf<TestBaseRegion>();
 expectTypeOf(myRegion._id).toEqualTypeOf<string | null>();
 expectTypeOf(myRegion.name).toBeString();
 expectTypeOf(myRegion.color).toEqualTypeOf<Color>();
-expectTypeOf(myRegion.shapes).toEqualTypeOf<
-  Array<
-    // TODO(LukeAbby): Arguably these merges shouldn't be being done as they're already a class instance.
-    | ({ type: "rectangle" } & foundry.data.RectangleShapeData)
-    | ({ type: "circle" } & foundry.data.CircleShapeData)
-    | ({ type: "ellipse" } & foundry.data.EllipseShapeData)
-    | ({ type: "polygon" } & foundry.data.PolygonShapeData)
-  >
->();
+expectTypeOf(myRegion.shapes).toExtend<foundry.data.BaseShapeData[]>();
 expectTypeOf(myRegion.elevation.bottom).toEqualTypeOf<number | null>();
 expectTypeOf(myRegion.elevation.top).toEqualTypeOf<number | null>();
 
