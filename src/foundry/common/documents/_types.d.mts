@@ -126,6 +126,8 @@ type TokenBarData = TokenDocument.InitializedData["bar1"];
 
 type TokenPosition = TokenDocument.Position;
 
+type TokenCoordinates = TokenDocument.Coordinates;
+
 type TokenDimensions = TokenDocument.Dimensions;
 
 type TokenHexagonalOffsetsData = TokenDocument.HexagonalOffsetsData;

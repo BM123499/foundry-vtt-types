@@ -1210,13 +1210,12 @@ declare namespace RegionDocument {
     indices: Uint16Array | Uint32Array;
   }
 
-  // TODO: <Data extends object>
-  interface RegionEvent {
+  interface RegionEvent<Data extends object = object> {
     /** The name of the event */
     name: string;
 
     /** The data of the event */
-    data: object;
+    data: Data;
 
     /** The Region the event was triggered on */
     region: RegionDocument.Implementation;
@@ -1224,6 +1223,41 @@ declare namespace RegionDocument {
     /** The User that triggered the event */
     user: User.Stored;
   }
+
+  interface TokenEnterExitEventData {
+    /** The Token that entered/exited the Region. */
+    token: TokenDocument.Implementation;
+
+    /** The movement if the Token entered/exited by moving out of the Region. */
+    movement: TokenDocument.MovementOperation | null;
+  }
+
+  interface TokenMoveEventData {
+    /** The Token that moved into/out of/within the Region. */
+    token: TokenDocument.Implementation;
+
+    /** The movement. */
+    movement: TokenDocument.MovementOperation;
+  }
+
+  interface TokenAnimateEventData {
+    /** The Token that animated into/out of the Region. */
+    token: TokenDocument.Implementation;
+
+    /** The position of the Token when it moved into/out of the Region. */
+    position: TokenDocument.Position;
+  }
+
+  interface TokenTurnEventData {
+    token: TokenDocument.Implementation;
+    combatant: Combatant.Implementation;
+    combat: Combat.Implementation;
+    round: number;
+    turn: number;
+    skipped: boolean;
+  }
+
+  interface TokenRoundEventData extends Omit<TokenTurnEventData, "turn"> {}
 
   interface SocketRegionEvent {
     /** The UUID of the Region the event was triggered on */

@@ -54,7 +54,7 @@ declare abstract class BaseToken extends Document<"Token", BaseToken.Schema, any
   /** @defaultValue `["DOCUMENT", "TOKEN"]` */
   static override LOCALIZATION_PREFIXES: string[];
 
-  /** @defaultValue `["x", "y", "elevation", "width", "height", "shape"]` */
+  /** @defaultValue `["x", "y", "elevation", "width", "height", "depth", "shape", "level"]` */
   static MOVEMENT_FIELDS: Readonly<string[]>;
 
   /**
@@ -136,7 +136,7 @@ declare abstract class BaseToken extends Document<"Token", BaseToken.Schema, any
    * @param data - The position and dimensions
    * @returns The offsets of occupied grid spaces
    */
-  getOccupiedGridSpaceOffsets(data?: TokenDocument.Dimensions2D): BaseGrid.Offset2D[];
+  getOccupiedGridSpaceOffsets(data?: TokenDocument.Dimensions3D): BaseGrid.Offset3D[];
 
   /**
    * Get the hexagonal offsets given the type, width, and height.

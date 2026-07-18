@@ -29,6 +29,7 @@ const myToken = new TestBaseToken({
   },
   width: 2,
   height: 3,
+  depth: 4,
   texture: {
     alphaThreshold: 0.9,
     anchorX: 0.7,
@@ -46,6 +47,7 @@ const myToken = new TestBaseToken({
   x: 500,
   y: 737,
   elevation: -50,
+  level: "LLLLLSomeIDLLLLL",
   sort: 0x42,
   locked: true,
   rotation: 99,
@@ -110,6 +112,29 @@ const myToken = new TestBaseToken({
       texture: "path/to/subject.webp",
     },
   },
+  movementAction: "walk",
+  _movementHistory: [
+    {
+      x: 500,
+      y: 737,
+      elevation: -50,
+      width: 2,
+      height: 3,
+      depth: 4,
+      shape: CONST.TOKEN_SHAPES.TRAPEZOID_1,
+      level: "LLLLLSomeIDLLLLL",
+      action: "walk",
+      terrain: null,
+      snapped: true,
+      explicit: true,
+      checkpoint: true,
+      intermediate: false,
+      userId: "UUUUUSomeIDUUUUU",
+      movementId: "MMMMMSomeIDMMMMM",
+      subpathId: "SSSSSSomeIDSSSSS",
+      cost: 3,
+    },
+  ],
   _regions: ["ZZZZZSomeIDZZZZZ"],
   flags: {
     core: {
@@ -141,6 +166,8 @@ expectTypeOf(myToken.hexagonalShape).toEqualTypeOf<CONST.TOKEN_HEXAGONAL_SHAPES>
 expectTypeOf(myToken.x).toBeNumber();
 expectTypeOf(myToken.y).toBeNumber();
 expectTypeOf(myToken.elevation).toBeNumber();
+expectTypeOf(myToken.depth).toBeNumber();
+expectTypeOf(myToken.level).toBeString();
 expectTypeOf(myToken.sort).toBeNumber();
 expectTypeOf(myToken.locked).toBeBoolean();
 expectTypeOf(myToken.lockRotation).toBeBoolean();
@@ -171,6 +198,8 @@ if (myToken.detectionModes[0]) {
 }
 expectTypeOf(myToken.ring.enabled).toBeBoolean();
 expectTypeOf(myToken.ring.subject.texture).toEqualTypeOf<string | null>();
+expectTypeOf(myToken._movementHistory[0]!.subpathId).toBeString();
+expectTypeOf(myToken._movementHistory[0]!.cost).toBeNumber();
 // TODO: ArrayField<ForeignDocumentField> is returning `never[]`
 expectTypeOf(myToken._regions).toEqualTypeOf<Array<string | null>>();
 expectTypeOf(myToken.flags).toEqualTypeOf<

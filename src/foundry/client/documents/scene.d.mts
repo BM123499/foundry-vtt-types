@@ -1,4 +1,4 @@
-import type { InexactPartial, MaybeArray, Merge } from "#utils";
+import type { DeepReadonly, InexactPartial, MaybeArray, Merge } from "#utils";
 import type { LightData, TextureData, fields } from "#common/data/_module.d.mts";
 import type { DatabaseBackend, Document, EmbeddedCollection } from "#common/abstract/_module.d.mts";
 import type {
@@ -1663,6 +1663,37 @@ declare namespace Scene {
 
   interface ThumbnailCreationData extends InexactPartial<_ThumbnailCreationData> {}
 
+  interface RegionSurface {
+    key: string;
+    region: RegionDocument.Implementation;
+    elevation: number;
+    light: boolean;
+    move: boolean;
+    sight: boolean;
+    sound: boolean;
+    occlusion: boolean;
+    exposure: boolean;
+    culling: boolean;
+  }
+
+  interface GetSurfacesOptions extends InexactPartial<{
+    type: CONST.EDGE_RESTRICTION_TYPES;
+    level: Level.Implementation | string;
+    occlusion: boolean;
+    exposure: boolean;
+    culling: boolean;
+  }> {}
+
+  interface SurfaceCollisionConfig<Mode extends "any" | "all" | "closest"> extends InexactPartial<{
+    type: CONST.EDGE_RESTRICTION_TYPES;
+    mode: Mode;
+    side: "below" | "above";
+    tMin: number;
+    tMax: number;
+  }> {
+    level: Level.Implementation | string;
+  }
+
   /**
    * The arguments to construct the document.
    *
@@ -1800,6 +1831,51 @@ declare class Scene extends BaseScene.Internal.ClientDocument {
    * @returns The array of Tokens whose regions changed
    */
   updateTokenRegions(tokens?: Iterable<TokenDocument.Implementation>): Promise<TokenDocument.Stored[]>;
+
+  /** Update the shape constraints of all Regions the current User is designated for. */
+  updateRegionShapeConstraints(types?: Iterable<CONST.EDGE_RESTRICTION_TYPES>): void;
+
+  /** Update the shape constraints of the given Region if the current User is designated for it. */
+  _updateRegionShapeConstraints(region: RegionDocument.Implementation): void;
+
+  /**
+   * Move/resize multiple Tokens.
+   * @param instructions - The movement/resizing instructions.
+   * @param options      - Parameters of the update and movement operation.
+   * @returns A Promise that resolves once all movement instructions are finished.
+   * @see {@linkcode TokenDocument.move | TokenDocument#move}
+   * @see {@linkcode TokenDocument.resize | TokenDocument#resize}
+   */
+  moveTokens(
+    instructions: Record<string, TokenDocument.MovementInstruction | TokenDocument.ResizingInstruction>,
+    options?: Partial<
+      Omit<TokenDocument.Database.UpdateOneDocumentOperation, "updates"> & Omit<TokenDocument.MovementOptions, "id">
+    >,
+  ): Promise<Record<string, boolean>>;
+
+  /** Invalidate the cached surfaces in this Scene. */
+  _invalidateSurfaces(): void;
+
+  /** Get all surfaces or surfaces matching the filter, ordered by elevation in ascending order. */
+  getSurfaces(options?: Scene.GetSurfacesOptions): DeepReadonly<Scene.RegionSurface[]>;
+
+  testSurfaceCollision(
+    origin: Canvas.ElevatedPoint,
+    destination: Canvas.ElevatedPoint,
+    config: Scene.SurfaceCollisionConfig<"any">,
+  ): boolean;
+
+  testSurfaceCollision(
+    origin: Canvas.ElevatedPoint,
+    destination: Canvas.ElevatedPoint,
+    config: Scene.SurfaceCollisionConfig<"all">,
+  ): Canvas.ElevatedPoint[];
+
+  testSurfaceCollision(
+    origin: Canvas.ElevatedPoint,
+    destination: Canvas.ElevatedPoint,
+    config: Scene.SurfaceCollisionConfig<"closest">,
+  ): Canvas.ElevatedPoint | null;
 
   // For type simplicity the following real override(s) are commented out.
   // These methods historically have been the source of a large amount of computation from tsc.

@@ -1,5 +1,6 @@
 import type TypeDataModel from "#common/abstract/type-data.d.mts";
 import type { AnyObject, EmptyObject } from "#utils";
+import type { BaseTerrainData } from "#client/data/terrain-data.d.mts";
 
 import fields = foundry.data.fields;
 
@@ -55,6 +56,22 @@ declare class RegionBehaviorType<
    * @internal
    */
   protected _handleRegionEvent(event: RegionDocument.RegionEvent): Promise<void>;
+
+  /**
+   * Get the terrain effects of this behavior for the movement of the given token.
+   * This function is called only for behaviors that are not disabled.
+   * Returns an empty array by default.
+   * @param token   - The token being or about to be moved within the region of this behavior
+   * @param segment - The segment data of the token's movement
+   * @param options - Additional options
+   */
+  protected _getTerrainEffects(
+    token: TokenDocument.Implementation,
+    segment: Pick<TokenDocument.MovementWaypoint, "width" | "height" | "shape" | "level" | "action"> & {
+      preview: boolean;
+    },
+    options?: Omit<foundry.canvas.placeables.Token.CreateTerrainMovementPathOptions, "preview">,
+  ): BaseTerrainData.TerrainEffect[];
 }
 
 export default RegionBehaviorType;

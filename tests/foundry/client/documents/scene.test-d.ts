@@ -1,4 +1,5 @@
 import { expectTypeOf } from "vitest";
+import type { DeepReadonly } from "fvtt-types/utils";
 
 import ImageHelper = foundry.helpers.media.ImageHelper;
 import Notifications = foundry.applications.ui.Notifications;
@@ -23,6 +24,25 @@ expectTypeOf(scene.activate()).toEqualTypeOf<Promise<Scene.Implementation | unde
 expectTypeOf(scene.view()).toEqualTypeOf<Promise<typeof scene | Notifications.Notification<"warning">>>();
 expectTypeOf(scene.clone()).toEqualTypeOf<Scene.Implementation>();
 expectTypeOf(scene.prepareBaseData()).toEqualTypeOf<void>();
+expectTypeOf(
+  scene.moveTokens(
+    {
+      TTTTTMovementTTT: { destination: { x: 100, y: 200, level: "LLLLLSomeIDLLLLL" } },
+      RRRRRResizeRRRRRR: { dimensions: { width: 2, height: 2, depth: 2 } },
+    },
+    { showRuler: true },
+  ),
+).toEqualTypeOf<Promise<Record<string, boolean>>>();
+expectTypeOf(scene.getSurfaces({ type: "move", level: "LLLLLSomeIDLLLLL" })).toEqualTypeOf<
+  DeepReadonly<Scene.RegionSurface[]>
+>();
+expectTypeOf(
+  scene.testSurfaceCollision(
+    { x: 0, y: 0, elevation: 0 },
+    { x: 0, y: 0, elevation: 10 },
+    { mode: "any", level: "LLLLLSomeIDLLLLL" },
+  ),
+).toBeBoolean();
 expectTypeOf(scene.createThumbnail()).toEqualTypeOf<Promise<ImageHelper.ThumbnailReturn>>();
 expectTypeOf(scene.createThumbnail({})).toEqualTypeOf<Promise<ImageHelper.ThumbnailReturn>>();
 expectTypeOf(scene.createThumbnail({ img: "path/to/my/img.png" })).toEqualTypeOf<

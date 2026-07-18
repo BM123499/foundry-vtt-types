@@ -16,41 +16,41 @@ type HotReloadData = Hooks.HotReloadData;
 
 type RulerWaypoint = unknown;
 
-type TokenFindMovementPathWaypoint = unknown;
+type TokenMeasureMovementPathOptions = Token.MeasureMovementPathOptions;
 
-type TokenConstrainMovementPathWaypoint = Token.ConstrainMovementPathWaypoint;
+type TokenConstrainMovementPathOptions = Token.ConstrainMovementPathOptions;
 
-type TokenConstrainMovementPathOptions = unknown;
+type TokenCreateTerrainMovementPathOptions = Token.CreateTerrainMovementPathOptions;
 
-type TokenFindMovementPathOptions = unknown;
+type TokenFindMovementPathOptions = Token.FindMovementPathOptions;
 
-type TokenFindMovementPathJob = unknown;
-
-type TokenGetTerrainMovementPathWaypoint = Omit<TokenDocument.GetCompleteMovementPathWaypoint, "terrain">;
-
-type TokenTerrainMovementWaypoint = TokenDocument.CompleteMovementWaypoint;
+type TokenFindMovementPathJob = Token.FindMovementPathJob;
 
 type TokenRulerData = foundry.canvas.placeables.tokens.TokenRuler.Data;
 
-type TokenPlannedMovement = Token.PlannedMovement;
+type TokenPlannedMovementWaypoint = Token.PlannedMovementWaypoint;
 
-type TokenRulerWaypointData = foundry.canvas.placeables.tokens.TokenRuler.WaypointData;
+type TokenPlannedMovement = Token.PlannedMovement;
 
 type TokenRulerWaypoint = foundry.canvas.placeables.tokens.TokenRuler.Waypoint;
 
-type TokenDragContext = unknown;
+type TokenDragContext = Token.DragContext;
 
-type TokenAnimationData = unknown;
+type TokenAnimationData = Token.AnimationData;
 
-type TokenAnimationContext = unknown;
+type TokenAnimationContext = Token.AnimationContext;
 
-type TokenAnimationOptions = unknown;
+type TokenAnimationOptions = Token.AnimateOptions;
 
-type TokenAnimationTransition = unknown;
+type TokenAnimationTransition = Token.AnimationTransition;
 
-type TokenMovementActionCostFunction = unknown;
+type TokenPanningOptions = Token.PanningOptions;
 
-type TokenMovementActionConfig = unknown;
+type TokenMovementActionCostFunction = CONFIG.Token.Movement.MovementActionCostFunction;
+
+type TokenMovementActionConfigDescriptor = CONFIG.Token.Movement.ActionConfigDescriptor;
+
+type TokenMovementActionConfig = CONFIG.Token.Movement.ActionConfig;
 
 type CanvasViewPosition = Canvas.PartialViewPosition;
 

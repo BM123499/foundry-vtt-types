@@ -177,10 +177,11 @@ declare const pm: Token.PlannedMovement;
 
 const rulerWaypoint = {
   action: "displace",
-  actionConfig: { label: "foo" },
+  actionConfig: CONFIG.Token.movement.actions.walk,
   center: new PIXI.Point(50, 50),
   checkpoint: true,
   cost: 1,
+  depth: 1,
   elevation: 0,
   explicit: true,
   height: 1,
@@ -188,6 +189,7 @@ const rulerWaypoint = {
   index: 1,
   intermediate: false,
   measurement: { backward: null, forward: null, cost: 1, diagonals: 0, distance: 1, euclidean: 1, spaces: 1 },
+  level: "ARandomIDForTest",
   movementId: "ARandomIDForTest",
   next: null,
   previous: null,
@@ -196,6 +198,7 @@ const rulerWaypoint = {
   size: { width: 100, height: 100 },
   snapped: true,
   stage: "planned",
+  subpathId: "ARandomIDForTest",
   terrain: null,
   unreachable: false,
   userId: "ARandomIDForTest",

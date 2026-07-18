@@ -395,15 +395,17 @@ const waypoints = [
   { x: 50, y: 50, elevation: 0 },
   { x: 70, y: 90, elevation: 60 },
 ];
-expectTypeOf(token.segmentizeRegionMovement(someRegion, waypoints)).toEqualTypeOf<RegionDocument.MovementSegment[]>();
+expectTypeOf(token.segmentizeRegionMovement(someRegion, waypoints)).toEqualTypeOf<
+  TokenDocument.RegionMovementSegment[]
+>();
 expectTypeOf(token.segmentizeRegionMovement(someRegion, waypoints, {})).toEqualTypeOf<
-  RegionDocument.MovementSegment[]
+  TokenDocument.RegionMovementSegment[]
 >();
 expectTypeOf(token.segmentizeRegionMovement(someRegion, waypoints, { teleport: true })).toEqualTypeOf<
-  RegionDocument.MovementSegment[]
+  TokenDocument.RegionMovementSegment[]
 >();
 expectTypeOf(token.segmentizeRegionMovement(someRegion, waypoints, { teleport: undefined })).toEqualTypeOf<
-  RegionDocument.MovementSegment[]
+  TokenDocument.RegionMovementSegment[]
 >();
 
 expectTypeOf(token.setTarget()).toBeVoid();
@@ -496,6 +498,30 @@ expectTypeOf(token["_initializeDragLeft"](pointerEvent)).toBeVoid();
 expectTypeOf(token["_getDragConstrainOptions"]()).toEqualTypeOf<Token.DragConstrainOptions>();
 expectTypeOf(token["_getDragPathfindingOptions"]()).toEqualTypeOf<Token.FindMovementPathOptions>();
 expectTypeOf(token["_getDragMovementAction"]()).toBeString();
+
+expectTypeOf(
+  token.planMovement({
+    allowedActions: ["walk", "fly"],
+    maxDistance: 30,
+    terrainOptions: {},
+    constrainOptions: { ignoreWalls: true },
+    measureOptions: {},
+    pathfindingOptions: { delay: 10 },
+    moveOptions: { animate: true },
+  }),
+).toEqualTypeOf<Promise<Token.PlanMovementResult | null>>();
+
+expectTypeOf(
+  token.findMovementPath([{ x: 0 }, { x: 100, level: "LLLLLSomeIDLLLLL" }]),
+).toEqualTypeOf<Token.FindMovementPathJob>();
+
+expectTypeOf(
+  token.constrainMovementPath([{ x: 0, y: 0, elevation: 0, depth: 1, level: "LLLLLSomeIDLLLLL" }], {
+    maxCost: 20,
+    maxDistance: 30,
+    measureOptions: {},
+  }),
+).toEqualTypeOf<Token.ConstrainMovementPathReturn>();
 expectTypeOf(token["_onDragLeftDrop"](pointerEvent)).toBeVoid();
 expectTypeOf(token["_shouldPreventDragLeftDrop"](pointerEvent)).toBeBoolean();
 expectTypeOf(token["_prepareDragLeftDropUpdates"](pointerEvent)).toEqualTypeOf<Token.DragLeftDropUpdate[]>();

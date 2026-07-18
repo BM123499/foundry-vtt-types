@@ -1,5 +1,6 @@
 import type {
   Coalesce,
+  DeepReadonly,
   DeepPartial,
   FixedInstanceType,
   HandleEmptyObject,
@@ -409,6 +410,14 @@ declare class Token extends PlaceableObject<TokenDocument.Implementation> {
   protected _isVisionSource(): boolean;
 
   /**
+   * Interactively plan movement for this Token.
+   * @param options - Movement planning options.
+   * @returns The planned movement, or null if planning was dismissed.
+   * @see {@linkcode TokenDocument.startMovement | TokenDocument#startMovement}
+   */
+  planMovement(options?: Token.PlanMovementOptions): Promise<Token.PlanMovementResult | null>;
+
+  /**
    * Render the bound mesh detection filter.
    * Note: this method does not verify that the detection filter exists.
    */
@@ -712,7 +721,7 @@ declare class Token extends PlaceableObject<TokenDocument.Implementation> {
    * (passed to {@linkcode Token._getMovementCostFunction | Token#_getMovementCostFunction})
    */
   measureMovementPath(
-    waypoints: Token.MeasureMovementPathWaypoint[],
+    waypoints: TokenDocument.MeasurableMovementWaypoint[],
     options?: Token.MeasureMovementPathOptions,
   ): foundry.grid.BaseGrid.MeasurePathResult;
 
@@ -740,8 +749,8 @@ declare class Token extends PlaceableObject<TokenDocument.Implementation> {
    * is returned.
    */
   constrainMovementPath(
-    waypoints: Token.ConstrainMovementPathWaypoint[],
-    { preview, ignoreWalls, ignoreCost, history }?: Token.ConstrainMovementPathOptions,
+    waypoints: Partial<TokenDocument.ProcessedMovementWaypoint>[],
+    options?: Token.ConstrainMovementPathOptions,
   ): Token.ConstrainMovementPathReturn;
 
   /**
@@ -756,7 +765,7 @@ declare class Token extends PlaceableObject<TokenDocument.Implementation> {
    * @returns The job of the movement pathfinder
    */
   findMovementPath(
-    waypoints: Token.FindMovementPathWaypoint[],
+    waypoints: Partial<TokenDocument.MovementWaypoint>[],
     options?: Token.FindMovementPathOptions,
   ): Token.FindMovementPathJob;
 
@@ -774,7 +783,7 @@ declare class Token extends PlaceableObject<TokenDocument.Implementation> {
    * @returns The movement path with terrain data
    */
   createTerrainMovementPath(
-    waypoints: Token.GetTerrainMovementPathWaypoint[],
+    waypoints: Partial<Omit<TokenDocument.ProcessedMovementWaypoint, "terrain">>[],
     options?: Token.CreateTerrainMovementPathOptions,
   ): Token.TerrainMovementWaypoint[];
 
@@ -822,7 +831,7 @@ declare class Token extends PlaceableObject<TokenDocument.Implementation> {
     region: Region.Implementation,
     waypoints: RegionDocument.SegmentizeMovementPathWaypoint[],
     options?: Region.SegmentizeMovementOptions,
-  ): RegionDocument.MovementSegment[];
+  ): TokenDocument.RegionMovementSegment[];
 
   /**
    * Set this Token as an active target for the current game User.
@@ -1162,12 +1171,42 @@ declare namespace Token {
     cost?: number | TokenDocument.MovementCostFunction | undefined;
   }
 
+  type PlannedMovementWaypoint = Omit<TokenDocument.MeasuredMovementWaypoint, "userId" | "movementId" | "subpathId">;
+
   interface PlannedMovement {
-    foundPath: Omit<TokenDocument.MeasuredMovementWaypoint, "userId" | "movementId">[];
-    unreachableWaypoints: Omit<TokenDocument.MeasuredMovementWaypoint, "userId" | "movementId">[];
+    foundPath: Token.PlannedMovementWaypoint[];
+    unreachableWaypoints: Token.PlannedMovementWaypoint[];
     history: TokenDocument.MeasuredMovementWaypoint[];
     hidden: boolean;
     searching: boolean;
+  }
+
+  interface PlanMovementOptions extends InexactPartial<{
+    allowedActions: Iterable<string> | null;
+    direct: boolean;
+    minCost: number;
+    maxCost: number;
+    minDistance: number;
+    maxDistance: number;
+    preventDrop: boolean;
+    terrainOptions: Omit<Token.CreateTerrainMovementPathOptions, "preview">;
+    constrainOptions: Omit<Token.ConstrainMovementPathOptions, "preview" | "history" | "measureOptions">;
+    measureOptions: Omit<Token.MeasureMovementPathOptions, "preview">;
+    pathfindingOptions: Omit<
+      Token.FindMovementPathOptions,
+      "preview" | "terrainOptions" | "constrainOptions" | "measureOptions"
+    >;
+    moveOptions: Omit<
+      TokenDocument.MovementOptions,
+      "id" | "method" | "terrainOptions" | "constrainOptions" | "measureOptions" | "planned"
+    >;
+  }> {}
+
+  interface PlanMovementResult {
+    id: string;
+    origin: TokenDocument.Position;
+    destination: TokenDocument.Position;
+    waypoints: TokenDocument.MovementWaypoint[];
   }
 
   /** @internal */
@@ -1296,7 +1335,10 @@ declare namespace Token {
   }
 
   /** @internal */
-  type _AnimationData = Pick<TokenDocument.Implementation, "x" | "y" | "width" | "height" | "rotation" | "alpha"> & {
+  type _AnimationData = Pick<
+    TokenDocument.Implementation,
+    "x" | "y" | "elevation" | "width" | "height" | "depth" | "level" | "alpha" | "rotation" | "bar1" | "bar2"
+  > & {
     /** The texture data. */
     texture: Pick<
       TokenDocument.Implementation["texture"],
@@ -1347,6 +1389,8 @@ declare namespace Token {
 
   interface PrepareAnimationOptions extends InexactPartial<_PrepareAnimationOptions> {}
 
+  type AnimationTransition = TextureTransitionFilter.TYPES;
+
   /** @internal */
   interface _AnimateOptions extends Pick<CanvasAnimation.AnimateOptions, "duration" | "easing" | "ontick"> {
     /**
@@ -1374,6 +1418,12 @@ declare namespace Token {
 
   interface AnimateOptions
     extends InexactPartial<_AnimateOptions>, GetAnimationDurationOptions, PrepareAnimationOptions {
+    /** A desired base movement speed in grid spaces per second. */
+    movementSpeed?: number | undefined;
+
+    /** The movement speed multiplier to apply to the base movement speed. */
+    speedMultiplier?: number | undefined;
+
     /**
      * @remarks If `true`, the `duration` of the animation will be overridden by the calculated total movement animation duration in
      * `Token##onUpdateAnimation` (via {@linkcode Token._onUpdate | Token#_onUpdate}). Unused as of 13.351.
@@ -1536,7 +1586,9 @@ declare namespace Token {
       | "elevation"
       | "width"
       | "height"
+      | "depth"
       | "shape"
+      | "level"
       | "action"
       | "terrain"
       | "snapped"
@@ -1565,78 +1617,28 @@ declare namespace Token {
      */
     ignoreCost: boolean;
 
+    /** The maximum cumulative cost. */
+    maxCost: number;
+
+    /** The maximum cumulative distance. */
+    maxDistance: number;
+
     /**
      * Consider movement history? If true, uses the current movement history. If waypoints are passed, uses those as the history.
      * @defaultValue `false`
      * @remarks marked by foundry as readonly
      */
-    history: boolean | TokenDocument.MeasuredMovementWaypoint[];
+    history: boolean | DeepReadonly<TokenDocument.MeasuredMovementWaypoint[]>;
+
+    /** The measurement options. */
+    measureOptions: Omit<Token.MeasureMovementPathOptions, "preview">;
   }> {}
 
-  type ConstrainedMovementWaypoint = TokenDocument.CompleteMovementWaypoint;
+  type ConstrainedMovementWaypoint = TokenDocument.ProcessedMovementWaypoint;
 
   type ConstrainMovementPathReturn = [constrainedPath: Token.ConstrainedMovementWaypoint[], wasConstrained: boolean];
 
-  interface FindMovementPathWaypoint {
-    /**
-     * The top-left x-coordinate in pixels (integer).
-     * @defaultValue the previous or source x-coordinate.
-     */
-    x?: number | undefined;
-
-    /**
-     * The top-left y-coordinate in pixels (integer).
-     * @defaultValue the previous or source y-coordinate.
-     */
-    y?: number | undefined;
-
-    /**
-     * The elevation in grid units.
-     * @defaultValue the previous or source elevation.
-     */
-    elevation?: number | undefined;
-
-    /**
-     * The width in grid spaces (positive).
-     * @defaultValue the previous or source width.
-     */
-    width?: number | undefined;
-
-    /**
-     * The height in grid spaces (positive).
-     * @defaultValue the previous or source height.
-     */
-    height?: number | undefined;
-
-    /**
-     * The shape type (see {@linkcode CONST.TOKEN_SHAPES}).
-     * @defaultValue the previous or source shape.
-     */
-    shape?: CONST.TOKEN_SHAPES | undefined;
-
-    /**
-     * The movement action from the previous to this waypoint.
-     */
-    action?: string | undefined;
-
-    /**
-     * Was this waypoint snapped to the grid?
-     * @defaultValue `false`.
-     */
-    snapped?: boolean | undefined;
-
-    /**
-     * Was this waypoint explicitly placed by the user?
-     * @defaultValue `false`.
-     */
-    explicit?: boolean | undefined;
-
-    /**
-     * Is this waypoint a checkpoint?
-     * @defaultValue `false`.
-     */
-    checkpoint?: boolean | undefined;
-  }
+  interface FindMovementPathWaypoint extends Partial<TokenDocument.MovementWaypoint> {}
 
   interface FindMovementPathOptions {
     /**
@@ -1646,30 +1648,20 @@ declare namespace Token {
     preview?: boolean | undefined;
 
     /**
-     * Ignore walls?
-     * @defaultValue `false`
-     */
-    ignoreWalls?: boolean | undefined;
-
-    /**
-     * Ignore cost?
-     * @defaultValue `false`
-     */
-    ignoreCost?: boolean | undefined;
-
-    /**
-     * Consider movement history? If true, uses the current movement history.
-     * If waypoints are passed, use those as the history.
-     * @defaultValue `false`
-     */
-    history?: boolean | TokenDocument.MeasuredMovementWaypoint[] | undefined;
-
-    /**
      * Unless the path can be found instantly, delay the start of the pathfinding
      * computation by this number of milliseconds.
      * @defaultValue `0`
      */
     delay?: number | undefined;
+
+    /** The terrain options. */
+    terrainOptions?: Omit<Token.CreateTerrainMovementPathOptions, "preview"> | undefined;
+
+    /** The constrain options. */
+    constrainOptions?: Omit<Token.ConstrainMovementPathOptions, "preview" | "measureOptions"> | undefined;
+
+    /** The measure options. */
+    measureOptions?: Omit<Token.MeasureMovementPathOptions, "preview"> | undefined;
   }
 
   interface FindMovementPathJob {
@@ -1694,7 +1686,7 @@ declare namespace Token {
   }
 
   /** A waypoint used as input to {@link Token.createTerrainMovementPath | `Token#createTerrainMovementPath`}. */
-  type GetTerrainMovementPathWaypoint = Omit<TokenDocument.GetCompleteMovementPathWaypoint, "terrain">;
+  type GetTerrainMovementPathWaypoint = Partial<TokenDocument.MovementWaypoint>;
 
   /** Options for {@link Token.createTerrainMovementPath | `Token#createTerrainMovementPath`}. */
   interface CreateTerrainMovementPathOptions {
@@ -1706,9 +1698,32 @@ declare namespace Token {
   }
 
   /** A waypoint in the terrain-annotated movement path returned by {@link Token.createTerrainMovementPath | `Token#createTerrainMovementPath`}. */
-  type TerrainMovementWaypoint = TokenDocument.CompleteMovementWaypoint;
+  type TerrainMovementWaypoint = TokenDocument.ProcessedMovementWaypoint;
 
-  type DragConstrainOptions = Omit<Token.ConstrainMovementPathOptions, "preview" | "history">;
+  type DragConstrainOptions = Omit<Token.ConstrainMovementPathOptions, "preview" | "history" | "measureOptions">;
+
+  interface DragContext {
+    token: Token.Implementation;
+    clonedToken: Token.Implementation;
+    origin: TokenDocument.Position;
+    destination: TokenDocument.MovementWaypoint;
+    waypoints: TokenDocument.PartialMovementWaypoint[];
+    foundPath: TokenDocument.MovementWaypoint[];
+    unreachableWaypoints: TokenDocument.MovementWaypoint[];
+    hidden: boolean;
+    updating: boolean;
+    search: Token.FindMovementPathJob;
+    searching: boolean;
+    searchId: number;
+  }
+
+  interface PanningOptions extends InexactPartial<{
+    transitionType: string;
+    duration: number;
+    speed: number;
+    easing: string | ((t: number) => number);
+    force: boolean;
+  }> {}
 
   interface DragWaypointPositionOptions extends InexactPartial<{
     /**

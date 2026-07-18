@@ -340,6 +340,12 @@ declare namespace TokenDocument {
     height: fields.NumberField<{ nullable: false; positive: true; initial: 1; step: 0.5 }>;
 
     /**
+     * The depth of the Token in grid units
+     * @defaultValue `1`
+     */
+    depth: fields.NumberField<{ required: true; nullable: false; min: 0; initial: 1 }>;
+
+    /**
      * The token's texture on the canvas.
      */
     texture: TextureData<{
@@ -697,6 +703,12 @@ declare namespace TokenDocument {
     height: fields.NumberField<{ required: true; nullable: false; positive: true; initial: undefined }>;
 
     /**
+     * The depth in grid spaces (nonnegative).
+     * @defaultValue `undefined`
+     */
+    depth: fields.NumberField<{ required: true; nullable: false; min: 0; initial: undefined }>;
+
+    /**
      * The shape type (see {@linkcode CONST.TOKEN_SHAPES}).
      * @defaultValue `undefined`
      */
@@ -711,6 +723,12 @@ declare namespace TokenDocument {
       CONST.TOKEN_SHAPES,
       CONST.TOKEN_SHAPES
     >;
+
+    /**
+     * The level ID.
+     * @defaultValue `undefined`
+     */
+    level: fields.DocumentIdField<{ required: true; nullable: false; readonly: false; initial: undefined }>;
 
     /**
      * The movement action from the previous to this waypoint.
@@ -769,13 +787,30 @@ declare namespace TokenDocument {
     }>;
 
     /**
+     * The ID of the subpath, which is equal to the movement ID of the first waypoint in the subpath.
+     * @defaultValue `undefined`
+     */
+    subpathId: fields.StringField<{
+      required: true;
+      blank: false;
+      initial: undefined;
+      validate: (value: string) => void;
+    }>;
+
+    /**
      * The movement cost from the previous to this waypoint (nonnegative).
      * @defaultValue `undefined`
      */
     cost: fields.NumberField<{ required: true; nullable: false; min: 0; initial: undefined }>;
   }
 
-  interface MeasuredMovementWaypoint extends fields.SchemaField.InitializedData<MeasuredMovementWaypointSchema> {}
+  interface MeasuredMovementWaypoint extends Omit<
+    fields.SchemaField.InitializedData<MeasuredMovementWaypointSchema>,
+    "cost"
+  > {
+    /** The movement cost from the previous to this waypoint (nonnegative). */
+    cost: number;
+  }
 
   /**
    * @remarks The interface for passing to {@linkcode TokenDocument.measureMovementPath | TokenDocument#measureMovementPath}, which pulls
@@ -892,6 +927,12 @@ declare namespace TokenDocument {
      * @defaultValue `0`
      */
     elevation: fields.NumberField<{ required: true; nullable: false; initial: 0 }>;
+
+    /**
+     * The level ID.
+     * @defaultValue The default Scene level ID.
+     */
+    level: fields.DocumentIdField<{ required: true; nullable: false; readonly: false; initial: string }>;
 
     /**
      * The z-index of this token relative to other siblings
@@ -1806,9 +1847,9 @@ declare namespace TokenDocument {
     | (Name extends Document.Type ? foundry.utils.Collection<Document.ImplementationFor<Name>> : never)
     | (Name extends Embedded.CollectionName ? Embedded.CollectionFor<Name> : never);
 
-  type MovementState = "completed" | "paused" | "pending" | "stopped";
+  type MovementState = "completed" | "paused" | "planned" | "pending" | "stopped";
 
-  type MovementMethod = "api" | "config" | "dragging" | "keyboard" | "paste" | "undo";
+  type MovementMethod = "api" | "config" | "hud" | "dragging" | "keyboard" | "paste" | "undo";
 
   interface Position {
     /**
@@ -1837,12 +1878,24 @@ declare namespace TokenDocument {
     height: number;
 
     /**
+     * The depth in grid spaces (nonnegative).
+     */
+    depth: number;
+
+    /**
      * The shape type (see {@linkcode CONST.TOKEN_SHAPES}).
      */
     shape: CONST.TOKEN_SHAPES;
+
+    /**
+     * The level ID.
+     */
+    level: string;
   }
 
-  interface Dimensions extends Pick<Position, "width" | "height" | "shape"> {}
+  interface Coordinates extends Pick<Position, "x" | "y" | "elevation" | "level"> {}
+
+  interface Dimensions extends Pick<Position, "width" | "height" | "depth" | "shape"> {}
 
   interface PartialDimensions extends InexactPartial<Dimensions> {}
 
@@ -1856,7 +1909,12 @@ declare namespace TokenDocument {
 
   interface MovementWaypoint extends Omit<
     MeasuredMovementWaypoint,
-    "terrain" | "intermediate" | "userId" | "movementId" | "cost"
+    "terrain" | "intermediate" | "userId" | "movementId" | "subpathId" | "cost"
+  > {}
+
+  interface ProcessedMovementWaypoint extends Omit<
+    MeasuredMovementWaypoint,
+    "userId" | "movementId" | "subpathId" | "cost"
   > {}
 
   /** @remarks Used for passing to {@linkcode TokenDocument.move | TokenDocument#move}. */
@@ -1864,7 +1922,7 @@ declare namespace TokenDocument {
 
   interface MovementSegmentData extends Pick<
     MeasuredMovementWaypoint,
-    "width" | "height" | "shape" | "action" | "terrain"
+    "width" | "height" | "depth" | "shape" | "level" | "action" | "terrain"
   > {
     actionConfig: CONFIG.Token.Movement.ActionConfig;
     teleport: boolean;
@@ -1921,7 +1979,7 @@ declare namespace TokenDocument {
     /**
      * The number spaces of moved along the combined path
      */
-    space: number;
+    spaces: number;
 
     /**
      * The number of diagonals moved along the combined path
@@ -1931,9 +1989,12 @@ declare namespace TokenDocument {
 
   interface MovementContinuationHandle {
     /**
-     * The movement ID
+     * The movement continuation ID
      */
-    movementId: string;
+    continuationId: string;
+
+    /** The continuation callback. */
+    callback: () => Promise<boolean>;
 
     /**
      * The continuation promise
@@ -1942,16 +2003,16 @@ declare namespace TokenDocument {
   }
 
   interface MovementContinuationState {
-    handles: Map<string | symbol, TokenDocument.MovementContinuationHandle>;
+    handles: Map<string | symbol | null, TokenDocument.MovementContinuationHandle>;
     callbacks: Array<(continued: boolean) => void>;
     pending: Set<string>;
   }
 
   interface MovementContinuationData {
     /**
-     * The movement ID
+     * The movement continuation ID
      */
-    movementId: string;
+    id: string;
 
     /**
      * The number of continuations
@@ -1997,6 +2058,9 @@ declare namespace TokenDocument {
     /** The ID of the movement */
     id: string;
 
+    /** The ID of the subpath, which is equal to the movement ID of its first waypoint. */
+    subpathId: string;
+
     /** The chain of prior movement IDs that this movement is a continuation of */
     chain: string[];
 
@@ -2015,6 +2079,9 @@ declare namespace TokenDocument {
     /** The waypoints and measurements of the history path */
     history: TokenDocument.MovementHistoryData;
 
+    /** Was a new subpath started? */
+    split: boolean;
+
     /** Was the movement constrained? */
     constrained: boolean;
 
@@ -2024,8 +2091,14 @@ declare namespace TokenDocument {
     /** The method of movement */
     method: TokenDocument.MovementMethod;
 
+    /** The terrain movement options. */
+    terrainOptions: Omit<Token.CreateTerrainMovementPathOptions, "preview">;
+
     /** The options to constrain movement */
     constrainOptions: ConstrainOptions;
+
+    /** The measurement options. */
+    measureOptions: Omit<Token.MeasureMovementPathOptions, "preview">;
 
     /** Automatically rotate the token in the direction of movement? */
     autoRotate: boolean;
@@ -2041,13 +2114,32 @@ declare namespace TokenDocument {
 
     /** The update options of the movement operation */
     updateOptions: Database.UpdateOneDocumentOperation;
+
+    /** Resolves once the entire movement finishes. */
+    finished: Promise<boolean>;
+
+    /** Movement animation lifecycle. */
+    animation: {
+      started: Promise<void>;
+      ended: Promise<void>;
+      duration: number;
+    };
   }
 
   /**
    * Used by both {@linkcode MoveOptions} and {@linkcode Database._PreServerUpdateOperation.movement}.
    * @internal
    */
-  interface _MoveOptions extends Pick<MovementData, "method" | "autoRotate" | "showRuler" | "constrainOptions"> {}
+  interface _MoveOptions extends Pick<
+    MovementData,
+    "method" | "autoRotate" | "showRuler" | "terrainOptions" | "constrainOptions" | "measureOptions" | "split"
+  > {
+    id: string;
+    planned: boolean;
+    pan: boolean | Token.PanningOptions;
+    animate: boolean;
+    animation: Partial<Token.AnimateOptions>;
+  }
 
   /**
    * The interface for passing to {@linkcode TokenDocument.move | TokenDocument#move}.
@@ -2056,7 +2148,7 @@ declare namespace TokenDocument {
    */
   interface MoveOptions
     extends
-      Omit<Database.UpdateOneDocumentOperation, "movement" | "_movementArguments">,
+      Omit<Database.UpdateOneDocumentOperation, "movement" | "_movementArguments" | "pan" | "animate" | "animation">,
       InexactPartial<_MoveOptions> {}
 
   /**
@@ -2110,7 +2202,14 @@ declare namespace TokenDocument {
 
   interface MeasureMovementPathOptions extends InexactPartial<_MeasureMovementPathOptions> {}
 
-  interface MovementOperation extends Omit<MovementData, "user" | "state" | "updateOptions"> {}
+  interface PreMovementOperation
+    extends
+      DeepReadonly<
+        Omit<MovementData, "user" | "state" | "updateOptions" | "finished" | "animation" | "autoRotate" | "showRuler">
+      >,
+      Pick<MovementData, "autoRotate" | "showRuler"> {}
+
+  interface MovementOperation extends DeepReadonly<Omit<MovementData, "user" | "state" | "updateOptions">> {}
 
   interface ActualMovementOperation extends Pick<MovementOperation, "autoRotate" | "showRuler" | "constrainOptions"> {}
 
@@ -2142,17 +2241,70 @@ declare namespace TokenDocument {
    * @remarks This is the type for entries in {@linkcode TokenDocument.Database._PreServerUpdateOperation._movement}, as well as the first
    * argument of {@linkcode TokenDocument._preUpdateMovement | TokenDocument#_preUpdateMovement}
    */
-  interface PreUpdateMovement
-    extends
-      DeepReadonly<Omit<MovementOperation, "autoRotate" | "showRuler">>,
-      Pick<MovementOperation, "autoRotate" | "showRuler"> {}
+  interface PreUpdateMovement extends PreMovementOperation {}
 
   interface SegmentizeMovementWaypoint extends InexactPartial<
     Pick<
       MeasuredMovementWaypoint,
-      "x" | "y" | "elevation" | "width" | "height" | "shape" | "action" | "terrain" | "snapped"
+      "x" | "y" | "elevation" | "width" | "height" | "depth" | "shape" | "level" | "action" | "terrain" | "snapped"
     >
   > {}
+
+  interface MeasurableMovementWaypointData {
+    /** A predetermined cost or cost function to use instead of the option cost. */
+    cost?: number | MovementCostFunction | undefined;
+  }
+
+  interface MeasurableMovementWaypoint
+    extends InexactPartial<ProcessedMovementWaypoint>, MeasurableMovementWaypointData {}
+
+  interface RegionMovementSegment {
+    type: CONST.REGION_MOVEMENT_SEGMENTS;
+    from: Position;
+    to: Position;
+    action: string;
+    terrain: TerrainData | null;
+    snapped: boolean;
+  }
+
+  interface MovementInstructionOptions extends InexactPartial<
+    Pick<
+      _MoveOptions,
+      | "id"
+      | "method"
+      | "autoRotate"
+      | "showRuler"
+      | "terrainOptions"
+      | "constrainOptions"
+      | "measureOptions"
+      | "split"
+      | "planned"
+    >
+  > {}
+
+  interface MovementInstructionDestination {
+    destination: Partial<InitializedData & MovementWaypoint>;
+  }
+
+  interface MovementInstructionWaypoints {
+    waypoints: PartialMovementWaypoint[];
+  }
+
+  type MovementInstruction = (MovementInstructionDestination | MovementInstructionWaypoints) &
+    MovementInstructionOptions;
+
+  interface ResizingInstruction extends Pick<MovementInstructionOptions, "id" | "method" | "split" | "planned"> {
+    dimensions: Partial<Omit<InitializedData & MovementWaypoint, "x" | "y" | "elevation">>;
+    autoRotate?: false | undefined;
+    showRuler?: false | undefined;
+    terrainOptions?: EmptyObject | undefined;
+    constrainOptions?: { ignoreWalls: true; ignoreCost: true } | undefined;
+    measureOptions?: EmptyObject | undefined;
+  }
+
+  interface MovementOptions extends InexactPartial<_MoveOptions> {}
+
+  type ResumeMovementCallback = () => Promise<boolean>;
 
   /**
    * Sometimes {@linkcode TokenDocument._onUpdateBaseActor | #_onUpdateBaseActor} gets passed {@linkcode Actor.Database.OnUpdateOptions},
@@ -2375,7 +2527,9 @@ declare class TokenDocument extends BaseToken.Internal.CanvasDocument {
    * @returns A Promise that resolves to true if the Token was moved, otherwise resolves to false
    */
   move(
-    waypoints: MaybeArray<TokenDocument.PartialMovementWaypoint>,
+    waypoints:
+      | TokenDocument.PartialMovementWaypoint[]
+      | Partial<TokenDocument.InitializedData & TokenDocument.MovementWaypoint>,
     options?: TokenDocument.MoveOptions,
   ): Promise<boolean>;
 
@@ -2395,8 +2549,11 @@ declare class TokenDocument extends BaseToken.Internal.CanvasDocument {
    * @returns A Promise that resolves to true if the Token was resized, otherwise resolves to false
    */
   resize(
-    dimensions?: TokenDocument.PartialDimensions,
-    options?: TokenDocument.Database.UpdateOneDocumentOperation,
+    dimensions: Partial<Omit<TokenDocument.InitializedData & TokenDocument.MovementWaypoint, "x" | "y" | "elevation">>,
+    options?: Omit<
+      TokenDocument.MoveOptions,
+      "autoRotate" | "showRuler" | "terrainOptions" | "constrainOptions" | "measureOptions"
+    >,
   ): Promise<boolean>;
 
   /**
@@ -2446,6 +2603,14 @@ declare class TokenDocument extends BaseToken.Internal.CanvasDocument {
   pauseMovement<Key extends string | undefined = undefined>(key?: Key): TokenDocument.PauseMovementReturn<Key>;
 
   /**
+   * Start the currently planned movement or the planned movement corresponding to given movement ID.
+   * Only owners of the Token can start the movement.
+   * @param movementId - The movement ID
+   * @returns True if the movement was started, false otherwise
+   */
+  startMovement(movementId?: string): Promise<boolean>;
+
+  /**
    * Resume the movement given its ID and the key that was passed to {@linkcode TokenDocument.pauseMovement | TokenDocument#pauseMovement}.
    * @param movementId - The movement ID
    * @param key        - The key that was passed to {@linkcode TokenDocument.pauseMovement | TokenDocument#pauseMovement}
@@ -2459,7 +2624,7 @@ declare class TokenDocument extends BaseToken.Internal.CanvasDocument {
    */
   // TODO: Split into 2D/3D overloads?
   measureMovementPath(
-    waypoints: TokenDocument.MeasureMovementPathWaypoint[],
+    waypoints: TokenDocument.MeasurableMovementWaypoint[],
     options?: TokenDocument.MeasureMovementPathOptions,
   ): BaseGrid.MeasurePathResult;
 
@@ -2469,8 +2634,14 @@ declare class TokenDocument extends BaseToken.Internal.CanvasDocument {
    * @returns The path of movement with all intermediate steps
    */
   getCompleteMovementPath(
-    waypoints: TokenDocument.GetCompleteMovementPathWaypoint[],
-  ): TokenDocument.CompleteMovementWaypoint[];
+    waypoints: TokenDocument.PartialMovementWaypoint[],
+  ): TokenDocument.ProcessedMovementWaypoint[];
+
+  /** Get the offsets of grid spaces occupied by this Token at the current or given position. */
+  override getOccupiedGridSpaceOffsets(data?: Partial<TokenDocument.Position>): BaseGrid.Offset3D[];
+
+  /** Get the maximum number of grid spaces this Token can occupy with the current or given dimensions. */
+  getMaxOccupiedGridSpaceCount(data?: TokenDocument.PartialDimensions): number;
 
   /**
    * Add or remove this Token from a Combat encounter.
@@ -2625,6 +2796,9 @@ declare class TokenDocument extends BaseToken.Internal.CanvasDocument {
    */
   protected _onMovementPaused(): void;
 
+  /** Called when movement is planned. */
+  protected _onMovementPlanned(): void;
+
   /**
    * Called when the movement is recorded or cleared.
    */
@@ -2667,6 +2841,9 @@ declare class TokenDocument extends BaseToken.Internal.CanvasDocument {
    * @returns Could this Token update change Region containment?
    */
   protected _couldRegionsChange(changes: TokenDocument.UpdateData): boolean;
+
+  /** Get the movement origin at the current or given position. */
+  getMovementOrigin(data?: Partial<TokenDocument.Position>): Canvas.ElevatedPoint;
 
   /**
    * Test whether the Token is inside the Region.
@@ -2721,7 +2898,7 @@ declare class TokenDocument extends BaseToken.Internal.CanvasDocument {
   segmentizeRegionMovementPath(
     region: RegionDocument.Implementation,
     waypoints: TokenDocument.SegmentizeMovementWaypoint[],
-  ): RegionDocument.MovementSegment[];
+  ): TokenDocument.RegionMovementSegment[];
 
   protected override _preCreateDescendantDocuments(...args: TokenDocument.PreCreateDescendantDocumentsArgs): void;
 

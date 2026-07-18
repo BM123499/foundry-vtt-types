@@ -3469,7 +3469,7 @@ declare global {
           /**
            * An image filename. Takes precedence over the icon if both are supplied.
            */
-          img: string;
+          img: string | null;
 
           /**
            * The number that is used to sort the movement actions / movement action configs.
@@ -3508,7 +3508,7 @@ declare global {
            * Get the default animation options for this movement action.
            * @defaultValue `() => ({})`
            */
-          getAnimationOptions: (token: foundry.canvas.placeables.Token) => AnimationOptions;
+          getAnimationOptions: (token: TokenDocument.Implementation) => AnimationOptions;
 
           /**
            * Can the current User select this movement action for the given Token? If selectable, the movement action of the
@@ -3535,10 +3535,33 @@ declare global {
           ) => MovementActionCostFunction;
         }
 
-        interface ActionConfig extends InexactPartial<_ActionConfig> {
+        interface ActionConfigDescriptor extends InexactPartial<Omit<_ActionConfig, "canSelect">> {
           /**
            * The label of the movement action.
            */
+          label: string;
+
+          /** The movement speed multiplier. Ignored if `getAnimationOptions` is defined. */
+          speedMultiplier?: number | undefined;
+
+          /**
+           * Can the current User select this movement action for the given Token?
+           * @defaultValue `true`
+           */
+          canSelect?:
+            | boolean
+            | ((token: TokenDocument.Implementation | foundry.data.PrototypeToken) => boolean)
+            | undefined;
+
+          /** Derive terrain difficulty from this movement action. */
+          terrainAction?: string | null | undefined;
+
+          /** The cost multiplier. Ignored if `getCostFunction` is defined. */
+          costMultiplier?: number | undefined;
+        }
+
+        interface ActionConfig extends _ActionConfig {
+          /** The label of the movement action. */
           label: string;
         }
 

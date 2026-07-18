@@ -50,6 +50,13 @@ declare class TokenLayer extends PlaceablesLayer<"Token"> {
    */
   _dragMovementAction: string | null;
 
+  /**
+   * The current movement planning context.
+   * @defaultValue `null`
+   * @internal
+   */
+  _movementPlanningContext: TokenLayer.MovementPlanningContext | null;
+
   // Fake type override
   static get instance(): Canvas["tokens"];
 
@@ -172,6 +179,12 @@ declare class TokenLayer extends PlaceablesLayer<"Token"> {
   ): void;
 
   /**
+   * Cancel the current movement planning workflow.
+   * @internal
+   */
+  _cancelMovementPlanning(): void;
+
+  /**
    * Provide an array of Tokens which are eligible subjects for overhead tile occlusion.
    * By default, only tokens which are currently controlled or owned by a player are included as subjects.
    */
@@ -267,6 +280,36 @@ declare namespace TokenLayer {
   interface DrawOptions extends PlaceablesLayer.DrawOptions {}
 
   interface TearDownOptions extends PlaceablesLayer.TearDownOptions {}
+
+  /**
+   * Data for the current movement planning workflow.
+   * @internal
+   */
+  interface MovementPlanningContext {
+    object: Token.Implementation;
+    allowedActions: string[] | null;
+    direct: boolean;
+    minCost: number;
+    maxCost: number;
+    minDistance: number;
+    maxDistance: number;
+    preventDrop: boolean;
+    terrainOptions: Omit<Token.CreateTerrainMovementPathOptions, "preview">;
+    constrainOptions: Omit<Token.ConstrainMovementPathOptions, "preview" | "history" | "measureOptions">;
+    measureOptions: Omit<Token.MeasureMovementPathOptions, "preview">;
+    pathfindingOptions: Omit<
+      Token.FindMovementPathOptions,
+      "preview" | "terrainOptions" | "constrainOptions" | "measureOptions"
+    >;
+    moveOptions: Omit<
+      TokenDocument.MovementOptions,
+      "id" | "method" | "terrainOptions" | "constrainOptions" | "measureOptions" | "planned"
+    >;
+    result: Token.PlanMovementResult | null;
+    resolve(result: Token.PlanMovementResult | null): void;
+    reject(error: unknown): void;
+    violations: string[];
+  }
 
   /** @remarks The waypoint data {@linkcode TokenLayer.storeHistory | TokenLayer#storeHistory} includes in movement-including update `undoOptions` */
   interface MovementUpdateHistoryWaypoint extends Pick<

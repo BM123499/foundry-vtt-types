@@ -136,6 +136,9 @@ declare namespace TokenRuler {
     /** The ID of movement, or null if planned movement. */
     movementId: string | null;
 
+    /** The ID of subpath, or null if planned movement. */
+    subpathId: string | null;
+
     /** The index of the waypoint, which is equal to the number of explicit waypoints from the first to this waypoint. */
     index: number;
 
@@ -174,7 +177,7 @@ declare namespace TokenRuler {
    * @remarks This is not intended to be mutated, so foundry has marked it DeepReadonly,
    * but there's no programmatic block on mutation
    */
-  interface Waypoint extends Omit<TokenDocument.MeasuredMovementWaypoint, "movementId">, WaypointData {}
+  interface Waypoint extends Omit<TokenDocument.MeasuredMovementWaypoint, "movementId" | "subpathId">, WaypointData {}
 
   /**
    * @remarks Intended to be extended by subclasses that need to track additional info between waypoints

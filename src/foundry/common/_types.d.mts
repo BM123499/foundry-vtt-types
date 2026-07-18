@@ -58,6 +58,10 @@ type PointArray = Canvas.PointTuple;
 
 type ElevatedPoint = Canvas.ElevatedPoint;
 
+type EdgeRestrictionType = CONST.EDGE_RESTRICTION_TYPES;
+
+type WallRestrictionType = CONST.WALL_RESTRICTION_TYPES;
+
 type Rectangle = Canvas.Rectangle;
 
 type BuiltinTypes = typeof Number | typeof String | typeof Boolean;

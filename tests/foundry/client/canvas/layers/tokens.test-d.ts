@@ -28,6 +28,7 @@ describe("TokenLayer Tests", () => {
     expectTypeOf(layer._tabIndex).toEqualTypeOf<number | null>();
     expectTypeOf(layer._draggedToken).toEqualTypeOf<Token.Implementation | null>();
     expectTypeOf(layer._dragMovementAction).toEqualTypeOf<string | null>();
+    expectTypeOf(layer._movementPlanningContext).toEqualTypeOf<TokenLayer.MovementPlanningContext | null>();
 
     expectTypeOf(layer.occlusionMode).toExtend<CONST.TOKEN_OCCLUSION_MODES>();
     layer.occlusionMode = CONST.TOKEN_OCCLUSION_MODES.OWNED; // Setter
@@ -92,6 +93,8 @@ describe("TokenLayer Tests", () => {
         TTTTTSomeIDTTTTT: plannedMovement,
       }),
     ).toBeVoid();
+
+    expectTypeOf(layer._cancelMovementPlanning()).toBeVoid();
   });
 
   test("Necessary type overrides", () => {
