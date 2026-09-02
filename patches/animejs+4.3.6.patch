@@ -1,0 +1,10 @@
+diff --git a/node_modules/animejs/dist/modules/easings/eases/parser.d.ts b/node_modules/animejs/dist/modules/easings/eases/parser.d.ts
+index de44964..7464ee4 100644
+--- a/node_modules/animejs/dist/modules/easings/eases/parser.d.ts
++++ b/node_modules/animejs/dist/modules/easings/eases/parser.d.ts
+@@ -122,4 +122,4 @@ import type { EasingFunction } from '../../types/index.js';
+ import type { BackEasing } from '../../types/index.js';
+ import type { ElasticEasing } from '../../types/index.js';
+ import type { EasingParam } from '../../types/index.js';
+-import { none as none_1 } from '../none.js';
++import { none } from '../none.js';
