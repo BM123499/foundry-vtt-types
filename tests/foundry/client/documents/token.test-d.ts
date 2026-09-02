@@ -94,3 +94,14 @@ declare const segmentizeWaypoints: TokenDocument.SegmentizeMovementWaypoint[];
 expectTypeOf(someToken.segmentizeRegionMovementPath(movementRegion, segmentizeWaypoints)).toEqualTypeOf<
   TokenDocument.RegionMovementSegment[]
 >();
+
+declare const waypoint: TokenDocument.MeasuredMovementWaypoint;
+expectTypeOf(waypoint.width).toBeNumber();
+expectTypeOf(waypoint.height).toBeNumber();
+expectTypeOf(waypoint.depth).toBeNumber();
+expectTypeOf(waypoint.shape).toEqualTypeOf<CONST.TOKEN_SHAPES>();
+expectTypeOf(waypoint.level).toBeString();
+
+declare const completeWaypoint: TokenDocument.GetCompleteMovementPathWaypoint;
+expectTypeOf(completeWaypoint.depth).toEqualTypeOf<number | undefined>();
+expectTypeOf(completeWaypoint.level).toEqualTypeOf<string | undefined>();
