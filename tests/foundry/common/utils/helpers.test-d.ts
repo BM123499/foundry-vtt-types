@@ -4,6 +4,30 @@ import utils = foundry.utils;
 
 // eslint-disable-next-line @typescript-eslint/no-deprecated
 import FormApplication = foundry.appv1.api.FormApplication;
+import ForcedDeletion = foundry.data.operators.ForcedDeletion;
+import ForcedReplacement = foundry.data.operators.ForcedReplacement;
+
+declare const deletion: ForcedDeletion;
+declare const unknownValue: unknown;
+declare const anyValue: any;
+declare const anyA: { a: any };
+declare const anyAWithDeletion: { a: any; b: ForcedDeletion };
+declare const anyB: { b: any };
+
+declare class OperatorHolder {
+  value: { gone: ForcedDeletion };
+  describe(): string;
+}
+declare const callback: () => void;
+declare const maybeApply: boolean;
+declare const maybeDeletion: { k1?: ForcedDeletion };
+declare const options: utils.MergeObjectOptions;
+declare const unionUpdate: { a: 2 } | { b: 3 };
+declare const unionDeletion: { a: ForcedDeletion } | { b: 1 };
+declare const numberSet: Set<number>;
+declare const color: utils.Color;
+declare const date: Date;
+declare const maybeInsert: boolean;
 
 declare function functionWithoutParameters(): void;
 declare function functionWithParameters(a: number, b: string, c?: boolean): void;
@@ -32,7 +56,46 @@ declare const someItem: Item.Stored;
 test("foundry/common/utils/helpers", () => {
   // applyDataOperators
 
-  // TODO: applyDataOperators tests once it is more than a passthrough
+  const withOperators = {
+    gone: deletion,
+    kept: ForcedReplacement.create({ a: 1 }),
+    plain: 2,
+    nested: { inner: deletion, list: [deletion, 3] },
+  };
+  const applied = utils.applyDataOperators(withOperators);
+  expectTypeOf(applied).toEqualTypeOf<{
+    kept: { a: number };
+    plain: number;
+    nested: { list: (undefined | number)[] };
+  }>();
+  // @ts-expect-error the deletion is applied
+  void applied.gone;
+
+  // Legacy keys are migrated and applied
+  expectTypeOf(utils.applyDataOperators({ "-=a": null, "==b": { c: 1 }, d: 2 })).toEqualTypeOf<{
+    b: { c: number };
+    d: number;
+  }>();
+
+  // Top-level operators are unwrapped
+  expectTypeOf(utils.applyDataOperators(deletion)).toEqualTypeOf<undefined>();
+  expectTypeOf(utils.applyDataOperators(ForcedReplacement.create("x"))).toEqualTypeOf<string>();
+
+  // Primitives, class instances, `unknown` and `any` pass through
+  expectTypeOf(utils.applyDataOperators(5)).toEqualTypeOf<number>();
+  expectTypeOf(utils.applyDataOperators(new OperatorHolder())).toEqualTypeOf<OperatorHolder>();
+  expectTypeOf(utils.applyDataOperators(unknownValue)).toBeUnknown();
+  expectTypeOf(utils.applyDataOperators(anyValue)).toBeAny();
+
+  // An `any` property is plain data, not a method
+  expectTypeOf(utils.applyDataOperators(anyAWithDeletion)).toEqualTypeOf<{ a: any }>();
+
+  // A plain object with a callback is still processed when it holds an operator
+  expectTypeOf(utils.applyDataOperators({ cb: callback, b: deletion })).toEqualTypeOf<{ cb: () => void }>();
+
+  // Generic code can name the result
+  const applyGeneric = <T extends object>(obj: T): utils.ApplyDataOperators<T> => utils.applyDataOperators(obj);
+  expectTypeOf(applyGeneric({ a: deletion, b: 1 })).toEqualTypeOf<{ b: number }>();
 
   // benchmark
 
@@ -642,52 +705,168 @@ test("foundry/common/utils/helpers", () => {
   assertType<{ a: { b: string } }>(utils.mergeObject({ a: ["foo"] }, { a: { b: "foo" } }, { enforceTypes: false }));
   // @ts-expect-error TODO(LukeAbby): `mergeObject` has not yet been fully implemented.
   assertType<never>(utils.mergeObject({ a: { b: "foo" } }, { a: ["foo"] }, { enforceTypes: true }));
-  // @ts-expect-error TODO(LukeAbby): `mergeObject` has not yet been fully implemented.
   assertType<{ a: string[] }>(utils.mergeObject({ a: { b: "foo" } }, { a: ["foo"] }, { enforceTypes: false }));
 
-  // performDeletions
-  // v10, `-=` prefixed keys are no longer auto removed
-  assertType<{ k1: string; k2: string; "-=k1": null }>(utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }));
-  assertType<{ k1: string; k2: string; "-=k1": null }>(
-    utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }, { performDeletions: false }),
-  );
-  assertType<{ k2: string; "-=k1": null }>(utils.mergeObject({ k2: "v2" }, { "-=k1": null }));
-  assertType<{ k1: string; k2: string; "-=k1": null }>(utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }));
+  // DataFieldOperators: legacy `-=`/`==` keys are migrated to operators under the bare key
+  const replacement = ForcedReplacement.create({ i2: "v2" });
 
-  assertType<{ k2: string }>(utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }, { performDeletions: true }));
-
-  assertType<{ k1: string; k2: string; "-=k1": null }>(
-    // @ts-expect-error deletions are performed so `-=k1` shouldn't be kept.
-    utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }, { performDeletions: true }),
-  );
-
-  assertType<{ k2: string; "-=k1": null }>(
-    // @ts-expect-error deletions are performed so `-=k1` shouldn't be kept.
-    utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }, { performDeletions: true }),
-  );
-
+  // Without `applyOperators`, an operator replacing an existing key is retained
+  assertType<{ k1: ForcedDeletion; k2: string }>(utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }));
+  assertType<{ k1: ForcedDeletion; k2: string }>(utils.mergeObject({ k1: "v1", k2: "v2" }, { k1: deletion }));
   assertType<{ k1: string; k2: string }>(
-    // @ts-expect-error deletions are performed so `k1` should be gone.
+    // @ts-expect-error the value of `k1` is replaced by the operator
+    utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }),
+  );
+  assertType<{ k1: ForcedDeletion; k2: string; "-=k1": null }>(
+    // @ts-expect-error the legacy key itself is never kept
+    utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }),
+  );
+
+  // A `ForcedDeletion` is never inserted
+  assertType<{ k2: string }>(utils.mergeObject({ k2: "v2" }, { "-=k1": null }));
+  assertType<{ k1: ForcedDeletion; k2: string }>(
+    // @ts-expect-error no `k1` to delete, so nothing is inserted
+    utils.mergeObject({ k2: "v2" }, { "-=k1": null }),
+  );
+
+  // `applyOperators: true` performs the deletion
+  assertType<{ k2: string }>(utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }, { applyOperators: true }));
+  assertType<{ k2: string }>(utils.mergeObject({ k1: "v1", k2: "v2" }, { k1: deletion }, { applyOperators: true }));
+  assertType<{ k1: unknown; k2: string }>(
+    // @ts-expect-error `k1` is deleted
+    utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }, { applyOperators: true }),
+  );
+
+  // The deprecated `performDeletions` never enables `applyOperators`
+  assertType<{ k1: ForcedDeletion; k2: string }>(
     utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }, { performDeletions: true }),
   );
 
-  assertType<{ k2: string }>(utils.mergeObject({ k2: "v2" }, { "-=k1": null }, { insertKeys: false }));
-
-  assertType<{ k2: string; "-=k1": null }>(
-    // @ts-expect-error new keys won't be inserted
-    utils.mergeObject({ k2: "v2" }, { "-=k1": null }, { insertKeys: false }),
+  // `overwrite: false` protects existing keys against operators
+  assertType<{ k1: string; k2: string }>(
+    utils.mergeObject({ k1: "v1", k2: "v2" }, { "-=k1": null }, { overwrite: false, applyOperators: true }),
   );
 
-  assertType<{ wrapper: { k2: string } }>(
-    utils.mergeObject(
-      { wrapper: { k1: "v1", k2: "v2" } },
-      { wrapper: { "-=k1": null } },
-      { recursive: true, performDeletions: true },
-    ),
+  // Forced replacement
+  assertType<{ k1: { i2: string } }>(
+    utils.mergeObject({ k1: { i1: "v1" } }, { k1: replacement }, { applyOperators: true }),
   );
-  assertType<{ wrapper: { k1: string; k2: string; "-=k1": null } }>(
+  assertType<{ k1: { i1: string; i2: string } }>(
+    // @ts-expect-error the inner object is replaced, not merged
+    utils.mergeObject({ k1: { i1: "v1" } }, { k1: replacement }, { applyOperators: true }),
+  );
+  assertType<{ k1: ForcedReplacement<{ i2: string }> }>(utils.mergeObject({ k1: { i1: "v1" } }, { k1: replacement }));
+  assertType<{ k1: { i2: string } }>(
+    utils.mergeObject({ k1: { i1: "v1" } }, { "==k1": { i2: "v2" } }, { applyOperators: true }),
+  );
+
+  // Nested deletion
+  const nestedDeletion = utils.mergeObject(
+    { wrapper: { k1: "v1", k2: "v2" } },
+    { wrapper: { "-=k1": null } },
+    { recursive: true, applyOperators: true },
+  );
+  assertType<{ wrapper: { k2: string } }>(nestedDeletion);
+  // @ts-expect-error the nested deletion is applied
+  void nestedDeletion.wrapper.k1;
+  assertType<{ wrapper: { k1: ForcedDeletion; k2: string } }>(
     utils.mergeObject({ wrapper: { k1: "v1", k2: "v2" } }, { wrapper: { "-=k1": null } }, { recursive: true }),
   );
+
+  // `applyOperators: true` also applies operators nested inside any value that is not merged recursively
+  const nestedOperators = { nested: { gone: deletion, keep: ForcedReplacement.create(42) } };
+  const inserted = utils.mergeObject({}, nestedOperators, { applyOperators: true });
+  assertType<{ nested: { keep: number } }>(inserted);
+  // @ts-expect-error the nested deletion is applied
+  void inserted.nested.gone;
+  const overPrimitive = utils.mergeObject({ nested: 5 }, nestedOperators, { applyOperators: true });
+  assertType<{ nested: { keep: number } }>(overPrimitive);
+  // @ts-expect-error the nested deletion is applied
+  void overPrimitive.nested.gone;
+  const nonRecursive = utils.mergeObject({ nested: { x: 1 } }, nestedOperators, {
+    applyOperators: true,
+    recursive: false,
+  });
+  assertType<{ nested: { keep: number } }>(nonRecursive);
+  // @ts-expect-error the nested deletion is applied
+  void nonRecursive.nested.gone;
+  const list = utils.mergeObject({}, { list: [{ a: deletion, b: 1 }] }, { applyOperators: true });
+  assertType<{ list: Array<{ b: number }> }>(list);
+  // @ts-expect-error the deletion inside the array element is applied
+  void list.list[0].a;
+  const legacyNested = utils.mergeObject({}, { n: { "-=x": null, "==y": { z: 1 }, w: 2 } }, { applyOperators: true });
+  assertType<{ n: { y: { z: number }; w: number } }>(legacyNested);
+  // @ts-expect-error nested legacy keys are migrated and applied too
+  void legacyNested.n["-=x"];
+
+  // Class instances are not plain objects, so their contents are left alone
+  const instances = utils.mergeObject({}, { holder: new OperatorHolder() }, { applyOperators: true });
+  expectTypeOf(instances.holder).toEqualTypeOf<OperatorHolder>();
+
+  // A key given both a value and a deletion is deleted or kept depending on key order, so it may be absent
+  const conflicting = utils.mergeObject({ k: 0 }, { k: 1, "-=k": null }, { applyOperators: true });
+  expectTypeOf(conflicting.k).toEqualTypeOf<1 | undefined>();
+  // @ts-expect-error `k` may have been deleted
+  assertType<{ k: number }>(conflicting);
+
+  // `insertKeys: false` inserts nothing, operators included
+  assertType<{ k2: string }>(utils.mergeObject({ k2: "v2" }, { "-=k1": null }, { insertKeys: false }));
+  assertType<{ k2: string; k3: number }>(
+    // @ts-expect-error new keys won't be inserted
+    utils.mergeObject({ k2: "v2" }, { k3: 1 }, { insertKeys: false, applyOperators: true }),
+  );
+
+  // When `applyOperators` is only known at runtime, a deletion may be applied or retained
+  const maybeApplied = utils.mergeObject({ k1: "v1", k2: "v2" }, { k1: deletion }, { applyOperators: maybeApply });
+  expectTypeOf(maybeApplied.k1).toEqualTypeOf<ForcedDeletion | undefined>();
+  // @ts-expect-error `k1` may have been deleted
+  assertType<{ k1: ForcedDeletion }>(maybeApplied);
+  const untypedOptions = utils.mergeObject({ k1: "v1", k2: "v2" }, { k1: deletion }, options);
+  expectTypeOf(untypedOptions.k1).toEqualTypeOf<ForcedDeletion | undefined>();
+  // @ts-expect-error `k1` may have been deleted
+  assertType<{ k1: ForcedDeletion }>(untypedOptions);
+
+  // An optional deletion may be absent, which keeps the original value
+  const maybeDeleted = utils.mergeObject({ k1: "v1", k2: "v2" }, maybeDeletion, { applyOperators: true });
+  expectTypeOf(maybeDeleted.k1).toEqualTypeOf<"v1" | undefined>();
+  // @ts-expect-error `k1` may have been deleted
+  assertType<{ k1: string }>(maybeDeleted);
+
+  // An `any` value is not a deletion
+  const withAny = utils.mergeObject({ a: 1 }, anyB);
+  expectTypeOf(withAny.b).toBeAny();
+  expectTypeOf(utils.mergeObject({ a: 1 }, anyA, { applyOperators: true }).a).toBeAny();
+
+  // A union `other` is merged as whichever member it is
+  expectTypeOf(utils.mergeObject({ a: 1 }, unionUpdate).a).toEqualTypeOf<1 | 2>();
+  const deletedByUnion = utils.mergeObject({ a: 1 }, unionDeletion, { applyOperators: true });
+  // @ts-expect-error `a` is deleted by one member
+  void deletedByUnion.a;
+
+  // Arrays, functions, `Set`s, `Map`s and `Color`s are written over a value rather than merged with it
+  expectTypeOf(utils.mergeObject({ a: { b: 1 } }, { a: [1, 2] }).a).toEqualTypeOf<[1, 2]>();
+  expectTypeOf(utils.mergeObject({ a: { b: 1 } }, { a: callback }).a).toEqualTypeOf<() => void>();
+  expectTypeOf(utils.mergeObject({ a: { b: 1 } }, { a: numberSet }).a).toEqualTypeOf<Set<number>>();
+  expectTypeOf(utils.mergeObject({ a: numberSet }, { a: { b: 1 } }).a).toEqualTypeOf<{ b: 1 }>();
+  expectTypeOf(utils.mergeObject({ a: { b: 1 } }, { a: color }).a).toEqualTypeOf<utils.Color>();
+
+  // Other class instances are merged key by key, so a `Date` keeps its methods
+  expectTypeOf(utils.mergeObject({ d: date }, { d: date }).d.getTime).toEqualTypeOf<() => number>();
+
+  // When `insertKeys` or `insertValues` is only known at runtime, new keys may be absent
+  const maybeInserted = utils.mergeObject({ a: 1 }, { b: 2 }, { insertKeys: maybeInsert });
+  expectTypeOf(maybeInserted.b).toEqualTypeOf<2 | undefined>();
+  // @ts-expect-error `b` may not have been inserted
+  assertType<{ b: number }>(maybeInserted);
+  // @ts-expect-error `b` may not have been inserted
+  assertType<{ w: { b: number } }>(utils.mergeObject({ w: { a: 1 } }, { w: { b: 2 } }, { insertValues: maybeInsert }));
+  // @ts-expect-error `b` may not have been inserted
+  assertType<{ b: number }>(utils.mergeObject({ a: 1 }, { b: 2 }, options));
+
+  // Generic wrappers compile
+  const mergeGeneric = <T extends object, U extends object>(original: T, other: U) =>
+    utils.mergeObject(original, other);
+  assertType<{ a: number; b: string }>(mergeGeneric({ a: 1 }, { b: "x" }));
 
   // bonus round
   assertType<{ a: number; b: number }>(utils.mergeObject({ a: 1 }, { b: 2 }, { enforceTypes: true }));
@@ -790,12 +969,13 @@ test("foundry/common/utils/helpers", () => {
     "==system": { baz: 42 },
     fizz: true,
   } as const;
-  // @ts-expect-error Return type not written yet, currently just a passthrough
+  // Keys given both a value and an operator depend on key order, so both outcomes are possible
   // eslint-disable-next-line @typescript-eslint/no-deprecated
   expectTypeOf(utils.applySpecialKeys(hasSpecialKeys)).toEqualTypeOf<{
-    type: string;
-    system: { baz: number };
-    fizz: boolean;
+    foo?: 7;
+    type: "character" | "npc";
+    system: { bar: 21 } | { baz: 42 };
+    fizz: true;
   }>();
 
   // isDeletionKey - not formally @deprecated, but presumably will be removed in v16

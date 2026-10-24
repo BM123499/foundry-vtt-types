@@ -10,10 +10,10 @@ import type {
   NonNullish,
   NonObject,
   OverlapsWith,
+  PrettifyType,
 } from "#utils";
 import type Document from "../abstract/document.d.mts";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Only used for links.
 import type { DataFieldOperator, ForcedDeletion, ForcedReplacement } from "#common/data/operators.d.mts";
 
 /**
@@ -23,8 +23,26 @@ import type { DataFieldOperator, ForcedDeletion, ForcedReplacement } from "#comm
  *
  * {@linkcode ForcedReplacement} values (or deprecated "==" keys) are updated in the object
  */
-// TODO: bespoke return type accounting for deletion keys recursively
-export function applyDataOperators<T>(obj: T): T;
+export function applyDataOperators<T>(obj: T): ApplyDataOperators<T>;
+
+/**
+ * @remarks The result of {@linkcode applyDataOperators}: replacements are unwrapped, deletions are removed from objects
+ * (and become `undefined` in arrays), and legacy `"-=key"`/`"==key"` entries are migrated, recursively through plain
+ * objects and arrays. Class instances, `unknown` and `any` are returned as-is.
+ */
+export type ApplyDataOperators<V> = unknown extends V
+  ? V
+  : V extends ForcedDeletion
+    ? undefined
+    : V extends ForcedReplacement<infer Inner>
+      ? ApplyDataOperators<Inner>
+      : V extends NonObject | AnyFunction
+        ? V
+        : V extends AnyArray
+          ? { -readonly [I in keyof V]: ApplyDataOperators<V[I]> }
+          : IsClassInstance<V> extends true
+            ? V
+            : PrettifyType<InsertedKeys<NormalizeOperatorKeys<V>, { applyOperators: true }>>;
 
 /**
  * Benchmark the performance of a function, calling it a requested number of iterations.
@@ -573,19 +591,23 @@ export function iterateValues(obj: object): IteratorObject<unknown, void, unknow
  * ```typescript
  * mergeObject({k1: {i1: "v1"}}, {"k1": ForcedReplacement.create({i2: "v2"})}, {applyOperators: true}); // {k1: {i2: "v2"}}
  * ```
+ *
+ * @privateRemarks `M` defaults to `{}` so that omitted options mean operators are not applied, rather than falling back
+ * to the constraint, whose `applyOperators: boolean` means they may or may not be.
  */
-export function mergeObject<const T extends object, const U extends object, const M extends MergeObjectOptions>(
-  original: T,
-  other?: U,
-  options?: M,
-  _d?: number,
-): MergeObject<T, U, M>;
+export function mergeObject<
+  const T extends object,
+  const U extends object,
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  const M extends MergeObjectOptions = {},
+>(original: T, other?: U, options?: M, _d?: number): MergeObject<T, U, M>;
 
-export type MergeObject<T, U, M extends MergeObjectOptions> = UpdateInsert<
-  DeleteByObjectKeys<T, U, M>,
-  RemoveDeletingObjectKeys<U, M>,
-  M
->;
+/**
+ * @privateRemarks Distributes over `U`, since a union `other` is merged as whichever member it is at runtime.
+ */
+export type MergeObject<T, U, M extends MergeObjectOptions> = U extends unknown
+  ? UpdateInsert<T, NormalizeOperatorKeys<U>, M>
+  : never;
 
 /** @internal */
 interface _MergeObjectOptions {
@@ -633,6 +655,7 @@ interface _MergeObjectOptions {
    * @defaultValue `false`
    * @deprecated "You have passed the `performDeletions` option to `foundry.utils.mergeObject` which is
    * deprecated and renamed to applyOperators." (since v14, until v16)
+   * @remarks Only logs the deprecation warning; it never enables `applyOperators`, so pass that instead.
    */
   performDeletions: boolean;
 
@@ -641,7 +664,7 @@ interface _MergeObjectOptions {
    * operators (if false) in the resulting merged object.
    * @defaultValue `false`
    */
-  applyOperators: boolean; // TODO: implement this in the mergeObject return type
+  applyOperators: boolean;
 }
 
 export interface MergeObjectOptions extends InexactPartial<_MergeObjectOptions> {}
@@ -815,8 +838,7 @@ export function unescapeHTML(value: string): string;
  * @deprecated "`foundry.utils.applySpecialKeys` has been deprecated and renamed to {@linkcode foundry.utils.applyDataOperators}"
  * (since v14, until v16)
  */
-// TODO: bespoke return type accounting for deletion keys recursively
-export function applySpecialKeys<T>(obj: T): T;
+export function applySpecialKeys<T>(obj: T): ApplyDataOperators<T>;
 
 /**
  * Is a string key of an object used for certain deletion or forced replacement operations.
@@ -950,52 +972,214 @@ type OmitAssignableFromType<T extends object, U> = { [k in keyof T as U extends 
  */
 type OmitNotAssignableFromType<T extends object, U> = { [k in keyof T as U extends T[k] ? k : never]: T[k] };
 
-type OmitByValue<T, ValueType> = { -readonly [Key in keyof T as T[Key] extends ValueType ? never : Key]: T[Key] };
-type RemoveNever<T> = OmitByValue<T, never>;
-type PropWithMinus<K> = K extends string ? `-=${K}` : never;
-type DeleteByObjectKeys<T, U, M extends MergeObjectOptions> = M["performDeletions"] extends true
-  ? RemoveNever<{
-      -readonly [K in keyof T]: PropWithMinus<K> extends keyof U
-        ? U[PropWithMinus<K>] extends null
-          ? never
-          : T[K]
-        : T[K];
-    }>
-  : T;
-type RemoveDeletingObjectKeys<T, M extends MergeObjectOptions> = M["performDeletions"] extends true
-  ? RemoveNever<{
-      -readonly [K in keyof T]: K extends string
-        ? Capitalize<K> extends K
-          ? T[K] extends null
-            ? never
-            : T[K]
-          : T[K]
-        : T[K];
-    }>
-  : T;
+/**
+ * @privateRemarks `mergeObject` and `applyDataOperators` migrate legacy `"-=key"` and `"==key"` entries to
+ * `ForcedDeletion` and `ForcedReplacement` values under the bare key, regardless of options.
+ * @internal
+ */
+type NormalizeOperatorKeys<U> = {
+  [K in keyof U as K extends `-=${infer Key}` | `==${infer Key}` ? Key : K]: K extends `-=${string}`
+    ? ForcedDeletion
+    : K extends `==${string}`
+      ? ForcedReplacement.CreateReturn<DataFieldOperator.Unwrap<U[K]>>
+      : U[K];
+};
 
-type MergeObjectProperty<T, U, M extends MergeObjectOptions> = U extends NonObject
+/**
+ * @privateRemarks "sometimes" means `applyOperators` is a runtime `boolean`.
+ * @internal
+ */
+type ApplyMode<M extends MergeObjectOptions> = M extends { applyOperators: true }
+  ? "always"
+  : true extends M[Extract<keyof M, "applyOperators">]
+    ? "sometimes"
+    : "never";
+
+/** @internal */
+type IsOptionalKey<U, K extends keyof U> = Partial<Pick<U, K>> extends Pick<U, K> ? true : false;
+
+/**
+ * @privateRemarks A key given both a value and a deletion is "sometimes", since which one wins depends on key order.
+ * `unknown` and `any` count as "never".
+ * @internal
+ */
+type DeletionKind<V> = unknown extends V
+  ? "never"
+  : [Extract<V, ForcedDeletion>] extends [never]
+    ? "never"
+    : [V] extends [ForcedDeletion]
+      ? "always"
+      : "sometimes";
+
+/**
+ * @privateRemarks Approximates the runtime {@linkcode isPlainObject} check: an object with methods is a class instance
+ * unless one of its own values is an operator or legacy key. A plain object with callbacks whose operators are only
+ * nested deeper is therefore left unprocessed.
+ * @internal
+ */
+type IsClassInstance<V> =
+  "operator" extends OwnValueKinds<V> ? false : "method" extends OwnValueKinds<V> ? true : false;
+
+/** @internal */
+type OwnValueKinds<V> = {
+  [K in keyof V]-?: K extends `-=${string}` | `==${string}`
+    ? "operator"
+    : unknown extends V[K]
+      ? never
+      : [Extract<V[K], DataFieldOperator.Any>] extends [never]
+        ? [NonNullable<V[K]>] extends [never]
+          ? never
+          : NonNullable<V[K]> extends AnyFunction
+            ? "method"
+            : never
+        : "operator";
+}[keyof V];
+
+/**
+ * @privateRemarks `V` with operators applied as `M` decides. `Unapplied` is the value when they are not, which differs
+ * from `V` where a deletion that would be applied has already been excluded from `V`.
+ * @internal
+ */
+type OperatorValue<V, M extends MergeObjectOptions, Unapplied = V> =
+  ApplyMode<M> extends "always"
+    ? ApplyDataOperators<V>
+    : ApplyMode<M> extends "never"
+      ? Unapplied
+      : Unapplied | ApplyDataOperators<V>;
+
+/**
+ * @privateRemarks A value that is written without a recursive merge: processed by `applyDataOperators` if operators are
+ * applied, otherwise cloned as-is.
+ * @internal
+ */
+type WrittenValue<U, M extends MergeObjectOptions> = OperatorValue<U, M, { -readonly [K in keyof U]: U[K] }>;
+
+/**
+ * @privateRemarks Values that `mergeObject` never merges into, because `getType` does not report them as an object.
+ * They are written as-is, since neither `deepClone` nor `applyDataOperators` copies them.
+ * @internal
+ */
+type UnmergeableValue = AnyFunction | ReadonlySet<unknown> | ReadonlyMap<unknown, unknown>;
+
+/**
+ * @privateRemarks Any other class instance is merged key by key like a plain object. Foundry copies only its own keys,
+ * but a type cannot tell those from methods, so methods count as keys too.
+ * @internal
+ */
+type MergeObjectProperty<T, U, M extends MergeObjectOptions> = U extends ForcedDeletion
   ? U
-  : T extends AnyArray
-    ? { -readonly [K in keyof U]: U[K] }
-    : T extends Record<string, any>
-      ? U extends Record<string, any>
-        ? M extends { recursive: false }
-          ? { -readonly [K in keyof U]: U[K] }
-          : MergeObject<
-              T,
-              U,
-              Omit<M, "insertKeys" | "performDeletions"> & {
-                insertKeys: M["insertValues"];
-                performDeletions: M["performDeletions"] extends true ? true : false;
-              }
-            >
-        : U
-      : U;
+  : U extends ForcedReplacement.Any
+    ? OperatorValue<U, M>
+    : U extends NonObject | UnmergeableValue
+      ? U
+      : U extends AnyArray
+        ? WrittenValue<U, M>
+        : T extends AnyArray | UnmergeableValue
+          ? WrittenValue<U, M>
+          : T extends Record<string, any>
+            ? U extends Record<string, any>
+              ? M extends { recursive: false }
+                ? WrittenValue<U, M>
+                : MergeObject<T, U, Omit<M, "insertKeys"> & { insertKeys: NestedInsertKeys<M> }>
+              : U
+            : OperatorValue<U, M>;
+
+/**
+ * @privateRemarks Whether an updated key is required, optional, or dropped. Applied deletions remove the key unless it is
+ * optional, and so may be absent; unapplied ones leave the operator as its value.
+ * @internal
+ */
+type UpdatedKey<U, K extends keyof U, M extends MergeObjectOptions> =
+  DeletionKind<U[K]> extends "never"
+    ? "required"
+    : ApplyMode<M> extends "never"
+      ? "required"
+      : [ApplyMode<M>, DeletionKind<U[K]>, IsOptionalKey<U, K>] extends ["always", "always", false]
+        ? "drop"
+        : "optional";
+
+/**
+ * @privateRemarks A deletion is kept as a value only where operators may be left unapplied.
+ * @internal
+ */
+type Survivor<V, M extends MergeObjectOptions> = ApplyMode<M> extends "always" ? Exclude<V, ForcedDeletion> : V;
+
+/**
+ * @privateRemarks An optional key of `other` may be absent, which leaves the original value in place.
+ * @internal
+ */
+type UpdatedValue<T, U, K extends keyof T & keyof U, M extends MergeObjectOptions> =
+  | MergeObjectProperty<T[K], Survivor<U[K], M>, M>
+  | (IsOptionalKey<U, K> extends true ? T[K] : never);
+
+/** @internal */
 type UpdateKeys<T, U, M extends MergeObjectOptions> = M extends { overwrite: false }
   ? { -readonly [K in keyof T]: T[K] }
-  : { -readonly [K in keyof T]: K extends keyof U ? MergeObjectProperty<T[K], U[K], M> : T[K] };
-type InsertKeys<T, U> = { -readonly [K in keyof T]: T[K] } & { -readonly [K in keyof U as Exclude<K, keyof T>]: U[K] };
-type UpdateInsert<T, U, M extends MergeObjectOptions> = M extends { insertKeys: false }
-  ? UpdateKeys<T, U, M>
-  : InsertKeys<UpdateKeys<T, U, M>, U>;
+  : {
+      -readonly [
+        K in keyof T as K extends keyof U ? (UpdatedKey<U, K, M> extends "required" ? K : never) : K
+      ]: K extends keyof U ? UpdatedValue<T, U, K, M> : T[K];
+    } & {
+      -readonly [
+        K in keyof T as K extends keyof U ? (UpdatedKey<U, K, M> extends "optional" ? K : never) : never
+      ]?: K extends keyof U ? UpdatedValue<T, U, K, M> : never;
+    };
+
+/**
+ * @privateRemarks Unlike `applyOperators`, `insertKeys` and `insertValues` default to `true`.
+ * @internal
+ */
+type InsertMode<M extends MergeObjectOptions, Option extends "insertKeys" | "insertValues"> =
+  M extends Record<Option, false> ? "never" : false extends M[Extract<keyof M, Option>] ? "sometimes" : "always";
+
+/**
+ * @privateRemarks Nested levels insert according to `insertValues`, so it is passed down as their `insertKeys`.
+ * @internal
+ */
+type NestedInsertKeys<M extends MergeObjectOptions> =
+  InsertMode<M, "insertValues"> extends "never"
+    ? false
+    : InsertMode<M, "insertValues"> extends "always"
+      ? true
+      : boolean;
+
+/**
+ * @privateRemarks A `ForcedDeletion` is never inserted, whether or not operators are applied. A key that is only
+ * sometimes a deletion is inserted either way when operators are unapplied, and may then be deleted when they are.
+ * @internal
+ */
+type InsertedKey<U, K extends keyof U, M extends MergeObjectOptions> =
+  DeletionKind<U[K]> extends "always"
+    ? "drop"
+    : [IsOptionalKey<U, K>, InsertMode<M, "insertKeys">] extends [false, "always"]
+      ? DeletionKind<U[K]> extends "sometimes"
+        ? ApplyMode<M> extends "never"
+          ? "required"
+          : "optional"
+        : "required"
+      : "optional";
+
+/** @internal */
+type InsertedValue<V, M extends MergeObjectOptions> = OperatorValue<Exclude<V, ForcedDeletion>, M, V>;
+
+/**
+ * @privateRemarks The keys of `U` that are inserted, other than `Existing` ones. `applyDataOperators` builds a plain
+ * object the same way, as an insertion into an empty object with operators applied.
+ * @internal
+ */
+type InsertedKeys<U, M extends MergeObjectOptions, Existing = never> = {
+  -readonly [
+    K in keyof U as K extends Existing ? never : InsertedKey<U, K, M> extends "required" ? K : never
+  ]: InsertedValue<U[K], M>;
+} & {
+  -readonly [
+    K in keyof U as K extends Existing ? never : InsertedKey<U, K, M> extends "optional" ? K : never
+  ]?: InsertedValue<U[K], M>;
+};
+
+/** @internal */
+type InsertKeys<T, U, M extends MergeObjectOptions> = { -readonly [K in keyof T]: T[K] } & InsertedKeys<U, M, keyof T>;
+
+/** @internal */
+type UpdateInsert<T, U, M extends MergeObjectOptions> =
+  InsertMode<M, "insertKeys"> extends "never" ? UpdateKeys<T, U, M> : InsertKeys<UpdateKeys<T, U, M>, U, M>;
